@@ -2,491 +2,524 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="PPMM"/>
 <meta name="theme-color" content="#060d13"/>
 <title>PPMM</title>
-<script>
-window.addEventListener('DOMContentLoaded',()=>{
-  const m={name:"PPMM",short_name:"PPMM",description:"Private Markets Monitor",start_url:".",display:"standalone",background_color:"#060d13",theme_color:"#060d13",orientation:"any",icons:[{src:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%23060d13'/><text y='140' x='14' font-size='130' font-family='monospace' fill='%235ab0e0'>P</text></svg>",sizes:"192x192",type:"image/svg+xml"}]};
-  const b=new Blob([JSON.stringify(m)],{type:'application/json'});
-  const l=document.createElement('link');l.rel='manifest';l.href=URL.createObjectURL(b);document.head.appendChild(l);
-});
-</script>
-<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.8.0/Recharts.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body,#root{height:100%;width:100%;overflow:hidden}
-body{background:#030810;font-family:'IBM Plex Mono',monospace;-webkit-font-smoothing:antialiased}
-::-webkit-scrollbar{width:3px;height:3px}
-::-webkit-scrollbar-track{background:#060d13}
-::-webkit-scrollbar-thumb{background:#1a3050;border-radius:2px}
+html,body{height:100%;width:100%;background:#030810;font-family:'IBM Plex Mono',monospace;color:#e8eef4;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:#060d13}::-webkit-scrollbar-thumb{background:#1a3050;border-radius:2px}
 input[type=range]{-webkit-appearance:none;appearance:none;height:3px;background:#1a3050;border-radius:2px;outline:none}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:#5ab0e0;border-radius:50%;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;background:#5ab0e0;border-radius:50%;cursor:pointer}
 input::placeholder{color:#2a4a6a}
-button{font-family:'IBM Plex Mono',monospace}
-[draggable="true"]{cursor:grab}
-[draggable="true"]:active{cursor:grabbing}
-@keyframes fadeInBg{from{opacity:0}to{opacity:1}}
-@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}
+button{font-family:'IBM Plex Mono',monospace;cursor:pointer}
+a{color:inherit;text-decoration:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes tickerMove{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.panel{background:linear-gradient(145deg,#0d1b26,#0a1520);border:1px solid #1a2d3e;border-radius:8px;padding:13px 14px;box-shadow:0 4px 18px rgba(0,0,0,.4);position:relative;animation:fadeIn .35s ease both}
+.panel:hover .drag-dots{opacity:.3}
+.drag-dots{position:absolute;top:8px;right:9px;display:grid;grid-template-columns:1fr 1fr;gap:3px;opacity:.15;pointer-events:none;transition:opacity .2s}
+.drag-dot{width:3px;height:3px;border-radius:50%;background:#5ab0e0}
+.panel.drag-over{background:linear-gradient(145deg,#112840,#0d2030);border:1.5px dashed #5ab0e0;box-shadow:0 0 18px rgba(90,176,224,.15)}
+.panel.dragging{opacity:.4}
+.row{display:flex;justify-content:space-between;align-items:center;padding:5px 5px;border-bottom:1px solid #0a1318;transition:background .1s;margin:0 -5px;border-radius:3px}
+.row.clickable{cursor:pointer}
+.row.clickable:hover{background:rgba(90,176,224,.04)}
+.sec-header{display:flex;align-items:center;gap:8px;margin-bottom:9px;padding-bottom:6px;border-bottom:1px solid #1e2d3d}
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:.15em;color:#8ba8c4}
+.mono{font-family:'IBM Plex Mono',monospace}
+.up{color:#00d084}.dn{color:#ff4d4d}.dim{color:#334}
+.badge{font-size:.5rem;padding:1px 4px;border-radius:3px;letter-spacing:.04em}
 .ticker-wrap{overflow:hidden;white-space:nowrap}
-.ticker-inner{display:inline-block;animation:tickerMove 70s linear infinite}
+.ticker-inner{display:inline-block;animation:tickerMove 70s linear infinite;font-size:.6rem;color:#5ab0e0;letter-spacing:.03em}
 .ticker-inner:hover{animation-play-state:paused}
+.modal-bg{position:fixed;inset:0;z-index:9999;background:rgba(3,8,14,.92);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.modal{background:linear-gradient(160deg,#0d1f2e,#080f18);border:1px solid #1e3a50;border-radius:12px;width:min(820px,95vw);max-height:90vh;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.8);animation:fadeIn .22s ease}
+.device-bar{background:#060d13;border-bottom:1px solid #1a2d3e;padding:4px 12px;display:flex;align-items:center;justify-content:center;gap:4px}
+.dev-btn{background:transparent;border:1px solid #131f2b;border-radius:3px;color:#2a5570;padding:2px 7px;font-size:.54rem;letter-spacing:.04em;transition:all .15s;display:flex;align-items:center;gap:3px}
+.dev-btn.active{background:#0e3a5a;border-color:#1a5a8a;color:#5ab0e0}
+.hint-bar{background:#07111a;border-bottom:1px solid #0d1c28;padding:3px 14px;font-size:.5rem;color:#2a5a74;letter-spacing:.07em;display:flex;gap:8px;align-items:center}
+.grid{display:grid;gap:10px}
+.header{background:linear-gradient(90deg,#060d13,#0a1a28,#060d13);border-bottom:1px solid #1a2d3e;padding:10px 15px;flex-shrink:0}
+.footer{text-align:center;padding:5px;font-size:.46rem;color:#1e3a50;letter-spacing:.08em;border-top:1px solid #0e1d28;flex-shrink:0}
+.news-row{padding:7px 4px;border-bottom:1px solid #0a151e;cursor:pointer;transition:background .1s}
+.news-row:hover{background:rgba(90,176,224,.04)}
+#app{display:flex;flex-direction:column;min-height:100vh}
+.frame-wrap{display:flex;justify-content:center;align-items:flex-start;padding:18px 0 32px;background:#030810;flex:1;overflow:auto}
+.screen{overflow:hidden;background:#060d13;display:flex;flex-direction:column}
+.screen-inner{flex:1;overflow-y:auto;padding:10px 11px 20px}
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="text/babel">
-const {useState,useEffect,useCallback,useRef,useMemo}=React;
-const {AreaChart,Area,XAxis,YAxis,Tooltip,CartesianGrid,ResponsiveContainer,ReferenceLine}=Recharts;
-const API_KEY="d7fim8pr01qpjqqkv5d0d7fim8pr01qpjqqkv5dg";
-const LS={
-  get:(k,fb)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb;}catch{return fb;}},
-  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
-};
+<div id="app"></div>
+<script>
+const API="d7fim8pr01qpjqqkv5d0d7fim8pr01qpjqqkv5dg";
+const LS={get:(k,fb)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb;}catch{return fb;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}};
+
 const DEVICES={
-  "iPad Air": {icon:"⬜",width:820, height:1180,cols:"repeat(2,1fr)",               radius:20,bezel:14,hfs:"1.4rem"},
-  "iPhone 16":{icon:"📱",width:393, height:852, cols:"repeat(1,1fr)",               radius:50,bezel:10,hfs:"1.05rem"},
-  "Mac":      {icon:"💻",width:null,height:null, cols:"repeat(auto-fill,minmax(300px,1fr))",radius:0, bezel:0, hfs:"1.5rem"}
+  "iPad Air": {icon:"⬜",w:820,h:1180,cols:2,radius:20,bezel:14,hfs:"1.4rem"},
+  "iPhone 16":{icon:"📱",w:393,h:852, cols:1,radius:50,bezel:10,hfs:"1.05rem"},
+  "Mac":      {icon:"💻",w:null,h:null,cols:0,radius:0, bezel:0, hfs:"1.5rem"}
 };
 const PANEL_IDS=["indices","fx-crypto","bonds-oil","stocks","news"];
 const INDICES=[
-  {label:"S&P 500",   finnhub:"OANDA:SPX500_USD"},
-  {label:"NASDAQ",    finnhub:"OANDA:NAS100_USD"},
-  {label:"FTSE 100",  finnhub:"OANDA:UK100_GBP"},
-  {label:"DAX",       finnhub:"OANDA:DE30_EUR"},
-  {label:"Nikkei 225",finnhub:"OANDA:JP225_USD"},
-  {label:"Hang Seng", finnhub:"OANDA:HK33_HKD"},
-  {label:"VIX",       finnhub:"^VIX",vix:true}
+  {l:"S&P 500",  s:"OANDA:SPX500_USD"},
+  {l:"NASDAQ",   s:"OANDA:NAS100_USD"},
+  {l:"FTSE 100", s:"OANDA:UK100_GBP"},
+  {l:"DAX",      s:"OANDA:DE30_EUR"},
+  {l:"Nikkei 225",s:"OANDA:JP225_USD"},
+  {l:"Hang Seng",s:"OANDA:HK33_HKD"},
+  {l:"VIX",      s:"^VIX",vix:true}
 ];
-const FX_PAIRS=[
-  {label:"GBP/USD",from:"GBP",to:"USD",finnhub:"OANDA:GBP_USD"},
-  {label:"EUR/USD",from:"EUR",to:"USD",finnhub:"OANDA:EUR_USD"},
-  {label:"USD/JPY",from:"USD",to:"JPY",finnhub:"OANDA:USD_JPY"},
-  {label:"EUR/GBP",from:"EUR",to:"GBP",finnhub:"OANDA:EUR_GBP"}
+const FX=[
+  {l:"GBP/USD",from:"GBP",to:"USD",s:"OANDA:GBP_USD"},
+  {l:"EUR/USD",from:"EUR",to:"USD",s:"OANDA:EUR_USD"},
+  {l:"USD/JPY",from:"USD",to:"JPY",s:"OANDA:USD_JPY"},
+  {l:"EUR/GBP",from:"EUR",to:"GBP",s:"OANDA:EUR_GBP"}
 ];
-const COMMODITIES=[{label:"Brent Crude",symbol:"OANDA:BRENT_USD"},{label:"WTI Crude",symbol:"OANDA:WTICO_USD"}];
-const CRYPTO=[{label:"Bitcoin",symbol:"BINANCE:BTCUSDT"}];
-const fmt=(n,dec=2)=>{if(n==null||isNaN(n))return"—";return Number(n).toLocaleString("en-US",{minimumFractionDigits:dec,maximumFractionDigits:dec});};
+const COMM=[{l:"Brent Crude",s:"OANDA:BRENT_USD"},{l:"WTI Crude",s:"OANDA:WTICO_USD"}];
+const CRYPTO=[{l:"Bitcoin",s:"BINANCE:BTCUSDT"}];
+
+const fmt=(n,d=2)=>{if(n==null||isNaN(n))return"—";return Number(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});};
 const fmtTime=ts=>new Date(ts*1000).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
-const fmtAgo=ts=>{const s=Math.floor((Date.now()-ts*1000)/1000);if(s<60)return`${s}s ago`;if(s<3600)return`${Math.floor(s/60)}m ago`;return`${Math.floor(s/3600)}h ago`;};
+const fmtAgo=ts=>{const s=Math.floor((Date.now()-ts*1000)/1000);if(s<60)return s+"s ago";if(s<3600)return Math.floor(s/60)+"m ago";return Math.floor(s/3600)+"h ago";};
+const chipColor=v=>v>=0?"#00d084":"#ff4d4d";
+const chipArrow=v=>v>=0?"▲":"▼";
+const tagColor=t=>{if(!t||t==="MARKETS")return"#5ab0e0";if(t==="FOREX")return"#f0a030";if(t==="MERGER")return"#a070e0";return"#00d084";};
 
-/* ── Chart Modal ── */
-function ChartModal({item,onClose}){
-  const [candles,setCandles]=useState([]);
-  const [loading,setLoading]=useState(true);
-  const [error,setError]=useState(false);
-  const [res,setRes]=useState("15");
-  useEffect(()=>{
-    if(!item)return;
-    setLoading(true);setError(false);setCandles([]);
-    (async()=>{
-      try{
-        const now=Math.floor(Date.now()/1000),from=now-86400,sym=item.finnhub||item.symbol;
-        const r=await fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(sym)}&resolution=${res}&from=${from}&to=${now}&token=${API_KEY}`);
-        const d=await r.json();
-        if(d.s==="ok"&&d.t?.length){setCandles(d.t.map((ts,i)=>({time:ts,open:d.o[i],high:d.h[i],low:d.l[i],close:d.c[i]})));}
-        else setError(true);
-      }catch{setError(true);}
-      setLoading(false);
-    })();
-  },[item,res]);
-  if(!item)return null;
-  const isUp=candles.length>1&&candles[candles.length-1].close>=candles[0].open;
-  const lc=isUp?"#00d084":"#ff4d4d";
-  const openP=candles[0]?.open??null,closeP=candles[candles.length-1]?.close??null;
-  const highP=candles.length?Math.max(...candles.map(c=>c.high)):null;
-  const lowP=candles.length?Math.min(...candles.map(c=>c.low)):null;
-  const chgPct=openP&&closeP?((closeP-openP)/openP*100):null;
-  const dec=item.label.includes("JPY")?3:(item.label.includes("Bitcoin")||item.label.includes("Nikkei")||item.label.includes("Hang"))?0:2;
-  const Tip=({active,payload})=>{
-    if(!active||!payload?.length)return null;
-    const d=payload[0].payload;
-    return(<div style={{background:"#0a1a28",border:"1px solid #1e3a50",borderRadius:6,padding:"7px 11px",fontFamily:"'IBM Plex Mono',monospace",fontSize:"0.67rem"}}>
-      <div style={{color:"#5ab0e0",marginBottom:3}}>{fmtTime(d.time)}</div>
-      <div style={{color:"#8ba8c4"}}>O {fmt(d.open,dec)}</div>
-      <div style={{color:"#8ba8c4"}}>H {fmt(d.high,dec)}</div>
-      <div style={{color:"#8ba8c4"}}>L {fmt(d.low,dec)}</div>
-      <div style={{color:lc}}>C {fmt(d.close,dec)}</div>
-    </div>);
-  };
-  return(
-    <div onClick={onClose} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(3,8,14,0.92)",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)",animation:"fadeInBg 0.2s ease"}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:"linear-gradient(160deg,#0d1f2e,#080f18)",border:"1px solid #1e3a50",borderRadius:12,width:"min(820px,95vw)",maxHeight:"90vh",overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,0.8)",animation:"slideUp 0.22s ease"}}>
-        <div style={{padding:"14px 18px 10px",borderBottom:"1px solid #1a2d3e",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-          <div>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"1.5rem",letterSpacing:"0.12em",color:"#e8eef4"}}>{item.label}</div>
-            {closeP!=null&&<div style={{display:"flex",gap:10,alignItems:"baseline",marginTop:3}}>
-              <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:"1.1rem",color:"#e8eef4"}}>{fmt(closeP,dec)}</span>
-              {chgPct!=null&&<span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:"0.8rem",color:lc}}>{isUp?"▲":"▼"} {Math.abs(chgPct).toFixed(2)}% today</span>}
-            </div>}
-          </div>
-          <div style={{display:"flex",gap:4,alignItems:"center"}}>
-            {[["5","5m"],["15","15m"],["30","30m"],["60","1h"]].map(([v,l])=>(
-              <button key={v} onClick={()=>setRes(v)} style={{background:res===v?"#0e3a5a":"transparent",border:`1px solid ${res===v?"#1a5a8a":"#1a2d3e"}`,borderRadius:4,color:res===v?"#5ab0e0":"#3a6a8a",padding:"3px 8px",cursor:"pointer",fontSize:"0.64rem",transition:"all 0.15s"}}>{l}</button>
-            ))}
-            <button onClick={onClose} style={{background:"#0d1e2e",border:"1px solid #1a2d3e",borderRadius:6,color:"#5a8cb0",width:27,height:27,cursor:"pointer",fontSize:"0.85rem",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-          </div>
-        </div>
-        {!loading&&!error&&candles.length>0&&(
-          <div style={{display:"flex",background:"#07111a",borderBottom:"1px solid #1a2d3e"}}>
-            {[["OPEN",fmt(openP,dec),null],["HIGH",fmt(highP,dec),"#00d084"],["LOW",fmt(lowP,dec),"#ff4d4d"],["CLOSE",fmt(closeP,dec),lc],["BARS",candles.length,null]].map(([l,v,c])=>(
-              <div key={l} style={{flex:1,padding:"7px 12px",borderRight:"1px solid #1a2d3e"}}>
-                <div style={{fontSize:"0.5rem",color:"#3a6a8a",letterSpacing:"0.1em"}}>{l}</div>
-                <div style={{fontSize:"0.78rem",color:c||"#8ba8c4",marginTop:2}}>{v}</div>
-              </div>
-            ))}
-          </div>
-        )}
-        <div style={{padding:"13px 8px 10px",height:285}}>
-          {loading&&<div style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",color:"#3a6a8a",fontSize:"0.73rem",animation:"pulse 1.2s ease infinite"}}>LOADING CANDLES…</div>}
-          {!loading&&error&&<div style={{height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,color:"#3a6a8a"}}>
-            <div style={{fontSize:"1.4rem",opacity:0.4}}>📊</div>
-            <div style={{fontSize:"0.7rem",letterSpacing:"0.08em"}}>INTRADAY DATA UNAVAILABLE</div>
-            <div style={{fontSize:"0.58rem",color:"#2a4a5a"}}>Symbol may require Finnhub paid tier</div>
-          </div>}
-          {!loading&&!error&&candles.length>0&&(
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={candles} margin={{top:4,right:10,left:2,bottom:0}}>
-                <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={lc} stopOpacity={0.22}/><stop offset="100%" stopColor={lc} stopOpacity={0}/></linearGradient></defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#0e1d28" vertical={false}/>
-                <XAxis dataKey="time" tickFormatter={fmtTime} tick={{fontFamily:"'IBM Plex Mono',monospace",fontSize:9,fill:"#3a6a8a"}} axisLine={{stroke:"#1a2d3e"}} tickLine={false} interval="preserveStartEnd"/>
-                <YAxis domain={["auto","auto"]} tick={{fontFamily:"'IBM Plex Mono',monospace",fontSize:9,fill:"#3a6a8a"}} axisLine={false} tickLine={false} width={68} tickFormatter={v=>fmt(v,dec)}/>
-                <Tooltip content={<Tip/>}/>
-                {openP&&<ReferenceLine y={openP} stroke="#2a5a8a" strokeDasharray="4 3" strokeWidth={1}/>}
-                <Area type="monotone" dataKey="close" stroke={lc} strokeWidth={1.8} fill="url(#cg)" dot={false} activeDot={{r:4,fill:lc,stroke:"#060d13",strokeWidth:2}} animationDuration={500}/>
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-        <div style={{padding:"6px 18px",borderTop:"1px solid #0e1d28",fontSize:"0.5rem",color:"#1e3a50",display:"flex",justifyContent:"space-between"}}>
-          <span>SOURCE: FINNHUB · LAST 24H</span><span>ESC OR TAP OUTSIDE TO CLOSE</span>
-        </div>
-      </div>
-    </div>
-  );
+/* ── State ── */
+let state={
+  device:LS.get("ppmm_device","iPad Air"),
+  panels:LS.get("ppmm_panels",PANEL_IDS),
+  tickers:LS.get("ppmm_tickers",["AAPL","BARC.L"]),
+  refresh:LS.get("ppmm_refresh",5),
+  data:{indices:{},fx:{},comm:{},crypto:{},bonds:{},stocks:{}},
+  news:[],newsLoading:false,newsLast:null,
+  loading:false,lastUp:null,countdown:0,
+  savedFlash:false,
+  drag:{from:null,over:null},
+  chart:null,chartCandles:[],chartLoading:false,chartError:false,chartRes:"15",
+  tickerInput:""
+};
+let refreshTimer=null,countdownTimer=null,savedTimer=null;
+
+function setState(patch){Object.assign(state,patch);render();}
+
+/* ── API calls ── */
+async function fetchQuote(sym){
+  try{const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${API}`);const d=await r.json();if(d.c&&d.c>0)return{price:d.c,change:d.d,pct:d.dp};}catch{}return null;
+}
+async function fetchFxRate(from,to){
+  try{const r=await fetch(`https://finnhub.io/api/v1/forex/rates?base=${from}&token=${API}`);const d=await r.json();if(d.quote?.[to])return{price:d.quote[to]};}catch{}return null;
+}
+async function fetchBonds(){
+  const res={};
+  for(const s of [{l:"US 2Y",id:"DGS2"},{l:"US 10Y",id:"DGS10"}]){
+    try{const r=await fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${s.id}`);const txt=await r.text();const lines=txt.trim().split("\n").filter(l=>!l.startsWith("DATE"));for(let i=lines.length-1;i>=0;i--){const[,v]=lines[i].split(",");if(v&&v!=="."&&!isNaN(+v)){res[s.l]={price:+v};break;}}}catch{}
+  }
+  for(const s of [{l:"UK 2Y",sym:"GBGB2YD.B"},{l:"UK 10Y",sym:"GBGB10YD.B"}]){
+    try{const r=await fetch(`https://stooq.com/q/d/l/?s=${s.sym}&i=d`);const txt=await r.text();const lines=txt.trim().split("\n").filter(l=>!l.startsWith("Date"));if(lines.length){const p=lines[lines.length-1].split(",");if(p[4]&&!isNaN(+p[4]))res[s.l]={price:+p[4]};}}catch{}
+  }
+  return res;
+}
+async function fetchAllData(){
+  setState({loading:true});
+  const data={indices:{},fx:{},comm:{},crypto:{},bonds:{},stocks:{}};
+  for(const i of INDICES){const q=await fetchQuote(i.s);if(q)data.indices[i.l]=q;}
+  for(const p of FX){const q=await fetchFxRate(p.from,p.to);if(q)data.fx[p.l]=q;}
+  for(const c of COMM){const q=await fetchQuote(c.s);if(q)data.comm[c.l]=q;}
+  for(const c of CRYPTO){const q=await fetchQuote(c.s);if(q)data.crypto[c.l]=q;}
+  data.bonds=await fetchBonds();
+  for(const t of state.tickers){const q=await fetchQuote(t);if(q)data.stocks[t]=q;}
+  setState({data,loading:false,lastUp:new Date(),countdown:state.refresh*60});
+}
+async function fetchNews(){
+  setState({newsLoading:true});
+  const all=[],seen=new Set();
+  const from=new Date(Date.now()-7*86400000).toISOString().split("T")[0];
+  const to=new Date().toISOString().split("T")[0];
+  for(const t of state.tickers.slice(0,5)){
+    const tag=t.replace(".L","").replace("^","");
+    try{const r=await fetch(`https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(t)}&from=${from}&to=${to}&token=${API}`);const d=await r.json();if(Array.isArray(d))d.slice(0,5).forEach(a=>{if(!seen.has(a.url)&&a.headline&&a.url){seen.add(a.url);all.push({...a,tag});}});}catch{}
+  }
+  for(const cat of["general","forex","merger"]){
+    try{const r=await fetch(`https://finnhub.io/api/v1/news?category=${cat}&token=${API}`);const d=await r.json();if(Array.isArray(d))d.slice(0,6).forEach(a=>{if(!seen.has(a.url)&&a.headline&&a.url){seen.add(a.url);all.push({...a,tag:cat==="general"?"MARKETS":cat.toUpperCase()});}});}catch{}
+  }
+  all.sort((a,b)=>(b.datetime||0)-(a.datetime||0));
+  setState({news:all.slice(0,50),newsLoading:false,newsLast:new Date()});
+}
+async function fetchChart(){
+  if(!state.chart)return;
+  setState({chartLoading:true,chartError:false,chartCandles:[]});
+  try{
+    const now=Math.floor(Date.now()/1000),from=now-86400,sym=state.chart.s||state.chart.finnhub;
+    const r=await fetch(`https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(sym)}&resolution=${state.chartRes}&from=${from}&to=${now}&token=${API}`);
+    const d=await r.json();
+    if(d.s==="ok"&&d.t?.length){setState({chartCandles:d.t.map((ts,i)=>({t:ts,o:d.o[i],h:d.h[i],l:d.l[i],c:d.c[i]})),chartLoading:false});}
+    else setState({chartError:true,chartLoading:false});
+  }catch{setState({chartError:true,chartLoading:false});}
 }
 
-/* ── News Panel ── */
-function NewsPanel({stockTickers}){
-  const [articles,setArticles]=useState([]);
-  const [loading,setLoading]=useState(true);
-  const [lastFetch,setLastFetch]=useState(null);
-
-  const fetchNews=useCallback(async()=>{
-    setLoading(true);
-    try{
-      const allArticles=[],seen=new Set();
-      const from=new Date(Date.now()-7*86400000).toISOString().split("T")[0];
-      const to=new Date().toISOString().split("T")[0];
-      for(const ticker of stockTickers.slice(0,5)){
-        const cleanTag=ticker.replace(".L","").replace("^","");
-        try{
-          const r=await fetch(`https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(ticker)}&from=${from}&to=${to}&token=${API_KEY}`);
-          const d=await r.json();
-          if(Array.isArray(d))d.slice(0,5).forEach(a=>{if(!seen.has(a.url)&&a.headline&&a.url){seen.add(a.url);allArticles.push({...a,tag:cleanTag});}});
-        }catch{}
-      }
-      for(const cat of ["general","forex","merger"]){
-        try{
-          const r=await fetch(`https://finnhub.io/api/v1/news?category=${cat}&token=${API_KEY}`);
-          const d=await r.json();
-          if(Array.isArray(d))d.slice(0,6).forEach(a=>{if(!seen.has(a.url)&&a.headline&&a.url){seen.add(a.url);allArticles.push({...a,tag:cat==="general"?"MARKETS":cat.toUpperCase()});}});
-        }catch{}
-      }
-      allArticles.sort((a,b)=>(b.datetime||0)-(a.datetime||0));
-      setArticles(allArticles.slice(0,50));
-      setLastFetch(new Date());
-    }catch{}
-    setLoading(false);
-  },[stockTickers]);
-
-  useEffect(()=>{fetchNews();},[fetchNews]);
-
-  const tickerStr=articles.map(a=>`${a.tag?"["+a.tag.toUpperCase()+"] ":""}${a.headline}`).join("   ·   ");
-  const tagColor=tag=>{if(!tag)return"#3a6a8a";if(tag==="MARKETS")return"#5ab0e0";if(tag==="FOREX")return"#f0a030";if(tag==="MERGER")return"#a070e0";return"#00d084";};
-
-  return(
-    <div style={{display:"flex",flexDirection:"column",height:"100%",minHeight:300}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:9,paddingBottom:7,borderBottom:"1px solid #1e2d3d"}}>
-        <span>📰</span>
-        <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"0.9rem",letterSpacing:"0.15em",color:"#8ba8c4"}}>Market News</span>
-        <span style={{marginLeft:"auto",fontSize:"0.52rem",color:"#2a5570"}}>{loading?<span style={{animation:"pulse 1s ease infinite",display:"inline-block"}}>FETCHING…</span>:lastFetch?lastFetch.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):""}</span>
-        <button onClick={fetchNews} disabled={loading} style={{background:"transparent",border:"1px solid #1a2d3e",borderRadius:3,color:"#3a6a8a",padding:"2px 5px",cursor:"pointer",fontSize:"0.58rem"}}>↻</button>
-      </div>
-      {articles.length>0&&(
-        <div style={{background:"#07111a",borderRadius:4,padding:"5px 8px",marginBottom:9,border:"1px solid #0e1d28",overflow:"hidden"}}>
-          <div className="ticker-wrap">
-            <div className="ticker-inner" style={{fontSize:"0.6rem",color:"#5ab0e0",letterSpacing:"0.03em"}}>
-              {tickerStr+"   ·   "+tickerStr}
-            </div>
-          </div>
-        </div>
-      )}
-      <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column"}}>
-        {loading&&articles.length===0&&<div style={{padding:"18px 0",textAlign:"center",color:"#2a5570",fontSize:"0.7rem",animation:"pulse 1.2s ease infinite"}}>LOADING NEWS…</div>}
-        {!loading&&articles.length===0&&<div style={{padding:"18px 0",textAlign:"center",color:"#2a5570",fontSize:"0.7rem"}}>NO ARTICLES FOUND</div>}
-        {articles.map((a,i)=>(
-          <div key={a.url+i} onClick={()=>window.open(a.url,"_blank")}
-            style={{padding:"7px 4px",borderBottom:"1px solid #0a151e",cursor:"pointer",transition:"background 0.1s"}}
-            onMouseEnter={e=>e.currentTarget.style.background="rgba(90,176,224,0.04)"}
-            onMouseLeave={e=>e.currentTarget.style.background="transparent"}
-          >
-            <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:3}}>
-              <span style={{fontSize:"0.5rem",padding:"1px 5px",borderRadius:3,background:`${tagColor(a.tag)}18`,color:tagColor(a.tag),border:`1px solid ${tagColor(a.tag)}40`,letterSpacing:"0.05em",flexShrink:0}}>{(a.tag||"NEWS").toUpperCase()}</span>
-              <span style={{fontSize:"0.52rem",color:"#2a5570"}}>{a.source||""}{a.datetime?` · ${fmtAgo(a.datetime)}`:""}</span>
-              <span style={{marginLeft:"auto",fontSize:"0.58rem",color:"#2a5a7a",flexShrink:0}}>↗</span>
-            </div>
-            <div style={{fontSize:"0.72rem",color:"#c8d8e8",lineHeight:1.4}}>{a.headline}</div>
-            {a.summary&&<div style={{fontSize:"0.62rem",color:"#4a6a8a",lineHeight:1.35,marginTop:3}}>{a.summary.slice(0,130)}{a.summary.length>130?"…":""}</div>}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+function scheduleRefresh(){
+  if(refreshTimer)clearInterval(refreshTimer);
+  refreshTimer=setInterval(()=>{fetchAllData();},state.refresh*60*1000);
+}
+function scheduleCountdown(){
+  if(countdownTimer)clearInterval(countdownTimer);
+  countdownTimer=setInterval(()=>{setState({countdown:Math.max(0,state.countdown-1)});},1000);
 }
 
-/* ── Common UI ── */
-const ChangeChip=({value,pct=false})=>{
-  if(value==null||isNaN(value))return <span style={{color:"#334"}}>—</span>;
-  const up=value>=0;
-  return <span style={{color:up?"#00d084":"#ff4d4d",fontSize:"0.7rem"}}>{up?"▲":"▼"} {Math.abs(value).toFixed(2)}{pct?"%":""}</span>;
-};
-const PulseIndicator=({active})=>(
-  <span style={{display:"inline-block",width:7,height:7,borderRadius:"50%",background:active?"#00d084":"#444",boxShadow:active?"0 0 6px #00d084":"none",marginRight:5,transition:"all 0.3s"}}/>
-);
-const SectionHeader=({icon,title})=>(
-  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:9,paddingBottom:6,borderBottom:"1px solid #1e2d3d"}}>
-    <span>{icon}</span>
-    <span style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:"0.9rem",letterSpacing:"0.15em",color:"#8ba8c4"}}>{title}</span>
-  </div>
-);
-const DataRow=({label,value,change,changePct,unit="",decimals=2,badge,badgeColor,chartItem,onChartClick})=>{
-  const [hover,setHover]=useState(false);
-  return(
-    <div onClick={()=>chartItem&&onChartClick?.(chartItem)} onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)}
-      style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 5px",borderBottom:"1px solid #0a1318",cursor:chartItem?"pointer":"default",background:hover&&chartItem?"rgba(90,176,224,0.04)":"transparent",borderRadius:3,transition:"background 0.1s",margin:"0 -5px"}}>
-      <div style={{display:"flex",alignItems:"center",gap:4}}>
-        {chartItem&&<span style={{fontSize:"0.56rem",color:hover?"#5ab0e0":"#2a5a7a",transition:"color 0.12s"}}>📈</span>}
-        <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:"0.73rem",color:"#8ba8c4"}}>{label}</span>
-        {badge&&<span style={{fontSize:"0.5rem",padding:"1px 4px",borderRadius:3,background:badgeColor?`${badgeColor}22`:"#1a2d3e",color:badgeColor||"#5a8cb0",border:badgeColor?`1px solid ${badgeColor}55`:"none",letterSpacing:"0.04em"}}>{badge}</span>}
-      </div>
-      <div style={{textAlign:"right"}}>
-        <div style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:"0.84rem",color:"#e8eef4"}}>{value!=null?`${fmt(value,decimals)}${unit}`:<span style={{color:"#334"}}>—</span>}</div>
-        {(change!=null||changePct!=null)&&<div style={{display:"flex",gap:6,justifyContent:"flex-end",marginTop:1}}>{change!=null&&<ChangeChip value={change}/>}{changePct!=null&&<ChangeChip value={changePct} pct/>}</div>}
-      </div>
-    </div>
-  );
-};
-const StockManager=({tickers,onAdd,onRemove})=>{
-  const [input,setInput]=useState("");
-  const submit=()=>{if(input.trim()){onAdd(input.trim());setInput("");}};
-  return(
-    <div style={{marginTop:9}}>
-      <div style={{display:"flex",gap:6,marginBottom:6}}>
-        <input value={input} onChange={e=>setInput(e.target.value.toUpperCase())} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="Add ticker e.g. TSLA"
-          style={{flex:1,background:"#060e14",border:"1px solid #1e3347",borderRadius:4,padding:"5px 8px",color:"#8ba8c4",fontSize:"0.73rem",outline:"none"}}/>
-        <button onClick={submit} style={{background:"#0e3a5a",border:"1px solid #1a5a8a",borderRadius:4,color:"#5ab0e0",padding:"5px 10px",cursor:"pointer",fontSize:"0.7rem"}}>ADD</button>
-      </div>
-      <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-        {tickers.map(t=>(
-          <div key={t} style={{display:"flex",alignItems:"center",gap:3,background:"#0d2035",border:"1px solid #1a3550",borderRadius:3,padding:"2px 6px"}}>
-            <span style={{fontSize:"0.68rem",color:"#8ba8c4"}}>{t}</span>
-            <button onClick={()=>onRemove(t)} style={{background:"none",border:"none",color:"#ff4d4d",cursor:"pointer",fontSize:"0.68rem",padding:0,lineHeight:1}}>✕</button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-const DraggableCard=({index,onDragStart,onDragOver,onDrop,isDragOver,isBeingDragged,children})=>(
-  <div draggable
-    onDragStart={e=>{e.dataTransfer.effectAllowed="move";onDragStart(index);}}
-    onDragOver={e=>{e.preventDefault();onDragOver(index);}}
-    onDrop={e=>{e.preventDefault();onDrop(index);}}
-    onDragEnd={()=>onDrop(index)}
-    style={{background:isDragOver?"linear-gradient(145deg,#112840,#0d2030)":"linear-gradient(145deg,#0d1b26,#0a1520)",border:isDragOver?"1.5px dashed #5ab0e0":"1px solid #1a2d3e",borderRadius:8,padding:"12px 13px",boxShadow:isDragOver?"0 0 18px rgba(90,176,224,0.15)":"0 4px 18px rgba(0,0,0,0.4)",opacity:isBeingDragged?0.4:1,cursor:"grab",transition:"all 0.12s",position:"relative",userSelect:"none"}}
-  >
-    <div style={{position:"absolute",top:8,right:8,display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px",opacity:0.17,pointerEvents:"none"}}>
-      {[0,1,2,3,4,5].map(i=><div key={i} style={{width:3,height:3,borderRadius:"50%",background:"#5ab0e0"}}/>)}
-    </div>
-    {children}
-  </div>
-);
-const DeviceFrame=({device,children})=>{
-  const d=DEVICES[device];
-  if(!d.width)return <div style={{flex:1,overflow:"auto",display:"flex",flexDirection:"column"}}>{children}</div>;
-  return(
-    <div style={{display:"flex",justifyContent:"center",alignItems:"flex-start",padding:"18px 0 32px",background:"#030810",flex:1,overflow:"auto"}}>
-      <div style={{width:d.width+d.bezel*2,background:device==="iPhone 16"?"#1a1a1e":"#1c2028",borderRadius:d.radius+d.bezel,padding:d.bezel,boxShadow:"0 28px 70px rgba(0,0,0,0.85),0 0 0 1px rgba(255,255,255,0.06)",position:"relative"}}>
-        {device==="iPhone 16"&&<div style={{position:"absolute",top:d.bezel+9,left:"50%",transform:"translateX(-50%)",width:116,height:32,background:"#000",borderRadius:18,zIndex:10}}/>}
-        {device==="iPad Air"&&<div style={{position:"absolute",top:"50%",left:d.bezel/2,transform:"translateY(-50%)",width:5,height:5,background:"#222",borderRadius:"50%",border:"1px solid #333"}}/>}
-        <div style={{width:d.width,height:d.height,borderRadius:d.radius-3,overflow:"hidden",background:"#060d13",position:"relative"}}>{children}</div>
-        {device==="iPhone 16"&&<div style={{height:4,width:90,background:"#333",borderRadius:2,margin:"7px auto 0"}}/>}
-      </div>
-    </div>
-  );
-};
-
-/* ── Main App ── */
-function App(){
-  const [refreshMin,setRefreshMin]=useState(()=>LS.get("ppmm_refresh",5));
-  const [device,setDevice]=useState(()=>LS.get("ppmm_device","iPad Air"));
-  const [panelOrder,setPanelOrder]=useState(()=>{
-    const saved=LS.get("ppmm_panels",PANEL_IDS);
-    const missing=PANEL_IDS.filter(id=>!saved.includes(id));
-    return [...saved,...missing];
+/* ── Mini sparkline SVG (no library needed) ── */
+function sparkline(candles,color,width=280,height=70){
+  if(!candles||candles.length<2)return"";
+  const vals=candles.map(c=>c.c);
+  const mn=Math.min(...vals),mx=Math.max(...vals);
+  const range=mx-mn||1;
+  const pts=vals.map((v,i)=>{
+    const x=(i/(vals.length-1))*width;
+    const y=height-((v-mn)/range)*(height-6)-3;
+    return `${x},${y}`;
   });
-  const [stockTickers,setStockTickers]=useState(()=>LS.get("ppmm_tickers",["AAPL","BARC.L"]));
-  const [lastUpdated,setLastUpdated]=useState(null);
-  const [refreshing,setRefreshing]=useState(false);
-  const [countdown,setCountdown]=useState(0);
-  const [savedFlash,setSavedFlash]=useState(false);
-  const [chartItem,setChartItem]=useState(null);
-  const [dragFrom,setDragFrom]=useState(null);
-  const [dragOver,setDragOver]=useState(null);
-  const [indices,setIndices]=useState({});
-  const [fx,setFx]=useState({});
-  const [commodities,setCommodities]=useState({});
-  const [crypto,setCrypto]=useState({});
-  const [bonds,setBonds]=useState({});
-  const [stocks,setStocks]=useState({});
-  const timerRef=useRef(null),countdownRef=useRef(null);
-  const curDevice=DEVICES[device];
-
-  useEffect(()=>{LS.set("ppmm_panels",panelOrder);},[panelOrder]);
-  useEffect(()=>{LS.set("ppmm_tickers",stockTickers);},[stockTickers]);
-  useEffect(()=>{LS.set("ppmm_refresh",refreshMin);},[refreshMin]);
-  useEffect(()=>{LS.set("ppmm_device",device);},[device]);
-
-  const fetchQuote=async sym=>{try{const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(sym)}&token=${API_KEY}`);const d=await r.json();if(d.c&&d.c>0)return{price:d.c,change:d.d,changePct:d.dp};}catch{}return null;};
-  const fetchFx=async(from,to)=>{try{const r=await fetch(`https://finnhub.io/api/v1/forex/rates?base=${from}&token=${API_KEY}`);const d=await r.json();if(d.quote?.[to])return{price:d.quote[to]};}catch{}return null;};
-  const fetchBonds=async()=>{
-    const res={};
-    for(const s of [{label:"US 2Y",id:"DGS2"},{label:"US 10Y",id:"DGS10"}]){try{const r=await fetch(`https://fred.stlouisfed.org/graph/fredgraph.csv?id=${s.id}`);const txt=await r.text();const lines=txt.trim().split("\n").filter(l=>!l.startsWith("DATE"));for(let i=lines.length-1;i>=0;i--){const[,v]=lines[i].split(",");if(v&&v!=="."&&!isNaN(+v)){res[s.label]={price:+v};break;}}}catch{}}
-    for(const s of [{label:"UK 2Y",sym:"GBGB2YD.B"},{label:"UK 10Y",sym:"GBGB10YD.B"}]){try{const r=await fetch(`https://stooq.com/q/d/l/?s=${s.sym}&i=d`);const txt=await r.text();const lines=txt.trim().split("\n").filter(l=>!l.startsWith("Date"));if(lines.length){const last=lines[lines.length-1].split(",");if(last[4]&&!isNaN(+last[4]))res[s.label]={price:+last[4]};}}catch{}}
-    return res;
-  };
-
-  const fetchAll=useCallback(async()=>{
-    setRefreshing(true);
-    const idxR={};for(const i of INDICES){const q=await fetchQuote(i.finnhub);if(q)idxR[i.label]=q;}setIndices(idxR);
-    const fxR={};for(const p of FX_PAIRS){const q=await fetchFx(p.from,p.to);if(q)fxR[p.label]=q;}setFx(fxR);
-    const comR={};for(const c of COMMODITIES){const q=await fetchQuote(c.symbol);if(q)comR[c.label]=q;}setCommodities(comR);
-    const crR={};for(const c of CRYPTO){const q=await fetchQuote(c.symbol);if(q)crR[c.label]=q;}setCrypto(crR);
-    setBonds(await fetchBonds());
-    const stkR={};for(const t of stockTickers){const q=await fetchQuote(t);if(q)stkR[t]=q;}setStocks(stkR);
-    setLastUpdated(new Date());setRefreshing(false);setCountdown(refreshMin*60);
-  },[stockTickers,refreshMin]);
-
-  useEffect(()=>{fetchAll();},[]);
-  useEffect(()=>{if(timerRef.current)clearInterval(timerRef.current);timerRef.current=setInterval(fetchAll,refreshMin*60*1000);setCountdown(refreshMin*60);return()=>clearInterval(timerRef.current);},[refreshMin,fetchAll]);
-  useEffect(()=>{if(countdownRef.current)clearInterval(countdownRef.current);countdownRef.current=setInterval(()=>setCountdown(c=>Math.max(0,c-1)),1000);return()=>clearInterval(countdownRef.current);},[lastUpdated]);
-  useEffect(()=>{const h=e=>{if(e.key==="Escape")setChartItem(null);};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[]);
-
-  const fmtCd=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
-  const flash=()=>{setSavedFlash(true);setTimeout(()=>setSavedFlash(false),1400);};
-  const addTicker=t=>{if(!stockTickers.includes(t)){setStockTickers(p=>[...p,t]);flash();}};
-  const removeTicker=t=>setStockTickers(p=>p.filter(x=>x!==t));
-  const handleDragStart=i=>setDragFrom(i);
-  const handleDragOver=i=>{if(i!==dragFrom)setDragOver(i);};
-  const handleDrop=i=>{if(dragFrom!==null&&dragFrom!==i){const next=[...panelOrder];const[m]=next.splice(dragFrom,1);next.splice(i,0,m);setPanelOrder(next);flash();}setDragFrom(null);setDragOver(null);};
-  const openChart=item=>setChartItem(item);
-  const hint=<div style={{fontSize:"0.52rem",color:"#2a5570",marginBottom:6,letterSpacing:"0.06em"}}>TAP ROW TO CHART</div>;
-
-  const panelContent={
-    indices:(
-      <><SectionHeader icon="🌍" title="Global Equity Indices"/>{hint}
-        {INDICES.map(i=>{const vv=i.vix?indices[i.label]?.price:null;const vl=vv==null?null:vv<15?{label:"LOW FEAR",color:"#00d084"}:vv<25?{label:"MODERATE",color:"#f0a030"}:vv<35?{label:"HIGH FEAR",color:"#ff7040"}:{label:"EXTREME",color:"#ff4d4d"};return <DataRow key={i.label} label={i.label} value={indices[i.label]?.price} change={i.vix?null:indices[i.label]?.change} changePct={i.vix?null:indices[i.label]?.changePct} decimals={i.label.includes("Nikkei")||i.label.includes("Hang")?0:2} badge={vl?.label} badgeColor={vl?.color} chartItem={{label:i.label,finnhub:i.finnhub}} onChartClick={openChart}/>;})}</>
-    ),
-    "fx-crypto":(
-      <><SectionHeader icon="💱" title="FX Rates"/>{hint}
-        {FX_PAIRS.map(p=><DataRow key={p.label} label={p.label} value={fx[p.label]?.price} decimals={p.label.includes("JPY")?3:5} chartItem={{label:p.label,finnhub:p.finnhub}} onChartClick={openChart}/>)}
-        <div style={{marginTop:11}}><SectionHeader icon="₿" title="Cryptocurrency"/>
-          {CRYPTO.map(c=><DataRow key={c.label} label={c.label} value={crypto[c.label]?.price} change={crypto[c.label]?.change} changePct={crypto[c.label]?.changePct} decimals={0} unit=" USD" chartItem={{label:c.label,finnhub:c.symbol}} onChartClick={openChart}/>)}</div></>
-    ),
-    "bonds-oil":(
-      <><SectionHeader icon="🏛️" title="Government Bond Yields"/>
-        {["US 2Y","US 10Y"].map(l=><DataRow key={l} label={l} value={bonds[l]?.price} unit="%" badge="FRED" decimals={2}/>)}
-        {["UK 2Y","UK 10Y"].map(l=><DataRow key={l} label={l} value={bonds[l]?.price} unit="%" badge="STOOQ" decimals={2}/>)}
-        <div style={{marginTop:11}}><SectionHeader icon="🛢️" title="Crude Oil"/>{hint}
-          {COMMODITIES.map(c=><DataRow key={c.label} label={c.label} value={commodities[c.label]?.price} change={commodities[c.label]?.change} changePct={commodities[c.label]?.changePct} unit=" USD" decimals={2} chartItem={{label:c.label,finnhub:c.symbol}} onChartClick={openChart}/>)}</div></>
-    ),
-    stocks:(
-      <><SectionHeader icon="📈" title="Stocks"/>{hint}
-        {stockTickers.map(t=><DataRow key={t} label={t} value={stocks[t]?.price} change={stocks[t]?.change} changePct={stocks[t]?.changePct} decimals={2} chartItem={{label:t,finnhub:t}} onChartClick={openChart}/>)}
-        <StockManager tickers={stockTickers} onAdd={addTicker} onRemove={removeTicker}/></>
-    ),
-    news:<NewsPanel stockTickers={stockTickers}/>,
-  };
-
-  const Dashboard=()=>(
-    <div style={{height:"100%",display:"flex",flexDirection:"column",background:"#060d13",color:"#e8eef4",overflow:"hidden"}}>
-      <div style={{background:"linear-gradient(90deg,#060d13 0%,#0a1a28 50%,#060d13 100%)",borderBottom:"1px solid #1a2d3e",padding:device==="iPhone 16"?"8px 11px":"10px 15px",flexShrink:0}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:curDevice.hfs,letterSpacing:"0.18em",color:"#5ab0e0",lineHeight:1}}>PPMM</div>
-            <div style={{fontSize:"0.48rem",color:"#3a6a8a",letterSpacing:"0.1em",marginTop:1}}>PRIVATE MARKETS MONITOR</div>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:device==="iPhone 16"?6:12}}>
-            {device!=="iPhone 16"&&<div style={{display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:"0.52rem",color:"#3a6a8a"}}>REFRESH</span><input type="range" min={1} max={30} value={refreshMin} onChange={e=>setRefreshMin(+e.target.value)} style={{width:52,cursor:"pointer"}}/><span style={{fontSize:"0.63rem",color:"#5ab0e0",minWidth:24}}>{refreshMin}m</span></div>}
-            <div style={{textAlign:"right"}}>
-              <div style={{display:"flex",alignItems:"center",gap:3}}><PulseIndicator active={!refreshing}/><span style={{fontSize:"0.56rem",color:refreshing?"#f0a030":"#00d084",letterSpacing:"0.08em"}}>{refreshing?"…":"LIVE"}</span></div>
-              {lastUpdated&&<div style={{fontSize:"0.48rem",color:"#3a6a8a"}}>{lastUpdated.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})} · {fmtCd(countdown)}</div>}
-            </div>
-            <button onClick={fetchAll} disabled={refreshing} style={{background:refreshing?"#0a1e2e":"#0e3a5a",border:"1px solid #1a5a8a",borderRadius:4,color:refreshing?"#2a5a7a":"#5ab0e0",padding:"4px 8px",cursor:refreshing?"default":"pointer",fontSize:"0.6rem"}}>↻</button>
-          </div>
-        </div>
-        {device==="iPhone 16"&&<div style={{display:"flex",alignItems:"center",gap:4,marginTop:5}}><span style={{fontSize:"0.5rem",color:"#3a6a8a"}}>REFRESH</span><input type="range" min={1} max={30} value={refreshMin} onChange={e=>setRefreshMin(+e.target.value)} style={{flex:1,cursor:"pointer"}}/><span style={{fontSize:"0.62rem",color:"#5ab0e0",minWidth:24}}>{refreshMin}m</span></div>}
-      </div>
-      <div style={{background:"#07111a",borderBottom:"1px solid #0d1c28",padding:"3px 14px",fontSize:"0.5rem",color:"#2a5a74",letterSpacing:"0.07em",display:"flex",gap:8,flexShrink:0,alignItems:"center"}}>
-        <span>⠿ DRAG</span><span>·</span><span>📈 CHART</span><span>·</span><span>📰 NEWS</span>
-        {savedFlash&&<span style={{color:"#00d084",marginLeft:"auto",animation:"fadeInBg 0.2s ease"}}>✓ SAVED</span>}
-      </div>
-      <div style={{flex:1,overflowY:"auto",padding:"10px 11px 20px"}}>
-        <div style={{display:"grid",gridTemplateColumns:curDevice.cols,gap:10}}>
-          {panelOrder.map((id,index)=>(
-            <DraggableCard key={id} index={index} onDragStart={handleDragStart} onDragOver={handleDragOver} onDrop={handleDrop} isDragOver={dragOver===index&&dragFrom!==index} isBeingDragged={dragFrom===index}>
-              {panelContent[id]}
-            </DraggableCard>
-          ))}
-        </div>
-      </div>
-      <div style={{textAlign:"center",padding:"5px",fontSize:"0.46rem",color:"#1e3a50",letterSpacing:"0.08em",borderTop:"1px solid #0e1d28",flexShrink:0}}>
-        FINNHUB · FRED · STOOQ · INFORMATIONAL USE ONLY
-      </div>
-    </div>
-  );
-
-  return(
-    <div style={{minHeight:"100vh",background:"#030810",display:"flex",flexDirection:"column",fontFamily:"'IBM Plex Mono',monospace"}}>
-      {chartItem&&<ChartModal item={chartItem} onClose={()=>setChartItem(null)}/>}
-      <div style={{background:"#060d13",borderBottom:"1px solid #1a2d3e",padding:"4px 12px",display:"flex",alignItems:"center",justifyContent:"center",gap:4,flexShrink:0}}>
-        <span style={{fontSize:"0.48rem",color:"#2a5570",letterSpacing:"0.1em",marginRight:3}}>VIEW</span>
-        {Object.keys(DEVICES).map(d=>(
-          <button key={d} onClick={()=>setDevice(d)} style={{background:device===d?"#0e3a5a":"transparent",border:`1px solid ${device===d?"#1a5a8a":"#131f2b"}`,borderRadius:3,color:device===d?"#5ab0e0":"#2a5570",padding:"2px 7px",cursor:"pointer",fontSize:"0.54rem",letterSpacing:"0.04em",transition:"all 0.15s",display:"flex",alignItems:"center",gap:3}}>
-            <span style={{fontSize:"0.6rem"}}>{DEVICES[d].icon}</span>
-            <span>{d}</span>
-            {device===d&&<span style={{fontSize:"0.38rem",color:"#00d084"}}>●</span>}
-          </button>
-        ))}
-        <span style={{marginLeft:"auto",fontSize:"0.45rem",color:"#1a3050",letterSpacing:"0.06em"}}>AUTO-SAVED</span>
-      </div>
-      <DeviceFrame device={device}><Dashboard/></DeviceFrame>
-    </div>
-  );
+  const path="M"+pts.join("L");
+  const area=`M${pts[0]}L${pts.join("L")}L${(vals.length-1)*width/(vals.length-1)},${height}L0,${height}Z`;
+  const gradId="sg"+Math.random().toString(36).slice(2,6);
+  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${color}" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="${area}" fill="url(#${gradId})"/>
+    <path d="${path}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round"/>
+  </svg>`;
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+/* ── Chart modal ── */
+function renderChartModal(){
+  if(!state.chart)return"";
+  const c=state.chartCandles;
+  const isUp=c.length>1&&c[c.length-1].c>=c[0].o;
+  const lc=isUp?"#00d084":"#ff4d4d";
+  const openP=c[0]?.o??null,closeP=c[c.length-1]?.c??null;
+  const highP=c.length?Math.max(...c.map(x=>x.h)):null;
+  const lowP=c.length?Math.min(...c.map(x=>x.l)):null;
+  const chgPct=openP&&closeP?((closeP-openP)/openP*100):null;
+  const lbl=state.chart.l||state.chart.label||"";
+  const dec=lbl.includes("JPY")?3:(lbl.includes("Bitcoin")||lbl.includes("Nikkei")||lbl.includes("Hang"))?0:2;
+  const spark=c.length>1?sparkline(c,lc):"";
+  const stats=[["OPEN",fmt(openP,dec),null],["HIGH",fmt(highP,dec),"#00d084"],["LOW",fmt(lowP,dec),"#ff4d4d"],["CLOSE",fmt(closeP,dec),lc],["BARS",c.length,null]];
+  return `
+  <div class="modal-bg" onclick="closeChart(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div style="padding:14px 18px 10px;border-bottom:1px solid #1a2d3e;display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.12em;color:#e8eef4">${lbl}</div>
+          ${closeP!=null?`<div style="display:flex;gap:10px;align-items:baseline;margin-top:3px">
+            <span class="mono" style="font-size:1.1rem;color:#e8eef4">${fmt(closeP,dec)}</span>
+            ${chgPct!=null?`<span class="mono" style="font-size:.8rem;color:${lc}">${isUp?"▲":"▼"} ${Math.abs(chgPct).toFixed(2)}% today</span>`:""}
+          </div>`:""}
+        </div>
+        <div style="display:flex;gap:4px;align-items:center">
+          ${["5","15","30","60"].map(v=>`<button onclick="setChartRes('${v}')" style="background:${state.chartRes===v?"#0e3a5a":"transparent"};border:1px solid ${state.chartRes===v?"#1a5a8a":"#1a2d3e"};border-radius:4px;color:${state.chartRes===v?"#5ab0e0":"#3a6a8a"};padding:3px 8px;font-size:.63rem">${v==="60"?"1h":v+"m"}</button>`).join("")}
+          <button onclick="closeChart()" style="background:#0d1e2e;border:1px solid #1a2d3e;border-radius:6px;color:#5a8cb0;width:27px;height:27px;font-size:.9rem;display:flex;align-items:center;justify-content:center">✕</button>
+        </div>
+      </div>
+      ${!state.chartLoading&&!state.chartError&&c.length>0?`
+      <div style="display:flex;background:#07111a;border-bottom:1px solid #1a2d3e">
+        ${stats.map(([l,v,cl])=>`<div style="flex:1;padding:7px 12px;border-right:1px solid #1a2d3e">
+          <div style="font-size:.5rem;color:#3a6a8a;letter-spacing:.1em">${l}</div>
+          <div class="mono" style="font-size:.78rem;color:${cl||"#8ba8c4"};margin-top:2px">${v}</div>
+        </div>`).join("")}
+      </div>`:""}
+      <div style="padding:14px 16px 10px;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        ${state.chartLoading?`<div style="color:#3a6a8a;font-size:.73rem;animation:pulse 1.2s ease infinite">LOADING CANDLES…</div>`:""}
+        ${state.chartError?`<div style="display:flex;flex-direction:column;align-items:center;gap:8px;color:#3a6a8a"><div style="font-size:1.4rem;opacity:.4">📊</div><div style="font-size:.7rem;letter-spacing:.08em">INTRADAY DATA UNAVAILABLE</div><div style="font-size:.58rem;color:#2a4a5a">Symbol may require Finnhub paid tier</div></div>`:""}
+        ${!state.chartLoading&&!state.chartError&&c.length>0?`<div style="width:100%">${spark}</div>`:""}
+      </div>
+      <div style="padding:6px 18px;border-top:1px solid #0e1d28;font-size:.5rem;color:#1e3a50;display:flex;justify-content:space-between">
+        <span>SOURCE: FINNHUB · LAST 24H</span><span>TAP OUTSIDE TO CLOSE</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── Row builder ── */
+function dataRow(label,value,change,pct,unit="",dec=2,badge,badgeColor,chartSym,chartLabel){
+  const hasChart=!!chartSym;
+  const chipHtml=(change!=null||pct!=null)?`<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:1px">
+    ${change!=null?`<span class="mono ${change>=0?"up":"dn"}" style="font-size:.7rem">${chipArrow(change)} ${Math.abs(change).toFixed(2)}</span>`:""}
+    ${pct!=null?`<span class="mono ${pct>=0?"up":"dn"}" style="font-size:.7rem">${chipArrow(pct)} ${Math.abs(pct).toFixed(2)}%</span>`:""}
+  </div>`:"";
+  const badgeHtml=badge?`<span class="badge mono" style="background:${badgeColor?badgeColor+"22":"#1a2d3e"};color:${badgeColor||"#5a8cb0"};border:1px solid ${badgeColor?badgeColor+"55":"transparent"}">${badge}</span>`:"";
+  const chartIcon=hasChart?`<span style="font-size:.56rem;color:#2a5a7a">📈</span>`:"";
+  const onclick=hasChart?`onclick="openChart('${chartSym}','${chartLabel||label}')"`:"";
+  return `<div class="row${hasChart?" clickable":""}" ${onclick}>
+    <div style="display:flex;align-items:center;gap:4px">${chartIcon}<span class="mono" style="font-size:.73rem;color:#8ba8c4">${label}</span>${badgeHtml}</div>
+    <div style="text-align:right">
+      <div class="mono" style="font-size:.84rem;color:#e8eef4">${value!=null?fmt(value,dec)+unit:'<span class="dim">—</span>'}</div>
+      ${chipHtml}
+    </div>
+  </div>`;
+}
+
+/* ── Panel content builders ── */
+function panelIndices(){
+  const hint=`<div style="font-size:.52rem;color:#2a5570;margin-bottom:6px;letter-spacing:.06em">TAP ROW TO CHART</div>`;
+  const rows=INDICES.map(i=>{
+    const q=state.data.indices[i.l];
+    const vv=i.vix?q?.price:null;
+    const vl=vv==null?null:vv<15?{l:"LOW FEAR",c:"#00d084"}:vv<25?{l:"MODERATE",c:"#f0a030"}:vv<35?{l:"HIGH FEAR",c:"#ff7040"}:{l:"EXTREME",c:"#ff4d4d"};
+    const dec=(i.l.includes("Nikkei")||i.l.includes("Hang"))?0:2;
+    return dataRow(i.l,q?.price,i.vix?null:q?.change,i.vix?null:q?.pct,"",dec,vl?.l,vl?.c,i.s,i.l);
+  }).join("");
+  return `<div class="sec-header"><span>🌍</span><span class="sec-title">Global Equity Indices</span></div>${hint}${rows}`;
+}
+function panelFxCrypto(){
+  const hint=`<div style="font-size:.52rem;color:#2a5570;margin-bottom:6px;letter-spacing:.06em">TAP ROW TO CHART</div>`;
+  const fxRows=FX.map(p=>{const q=state.data.fx[p.l];return dataRow(p.l,q?.price,null,null,"",p.l.includes("JPY")?3:5,null,null,p.s,p.l);}).join("");
+  const crRows=CRYPTO.map(c=>{const q=state.data.crypto[c.l];return dataRow(c.l,q?.price,q?.change,q?.pct," USD",0,null,null,c.s,c.l);}).join("");
+  return `<div class="sec-header"><span>💱</span><span class="sec-title">FX Rates</span></div>${hint}${fxRows}
+  <div style="margin-top:11px"><div class="sec-header"><span>₿</span><span class="sec-title">Cryptocurrency</span></div>${crRows}</div>`;
+}
+function panelBondsOil(){
+  const hint=`<div style="font-size:.52rem;color:#2a5570;margin-bottom:6px;letter-spacing:.06em">TAP ROW TO CHART</div>`;
+  const usBonds=["US 2Y","US 10Y"].map(l=>{const q=state.data.bonds[l];return dataRow(l,q?.price,null,null,"%",2,"FRED",null,null,null);}).join("");
+  const ukBonds=["UK 2Y","UK 10Y"].map(l=>{const q=state.data.bonds[l];return dataRow(l,q?.price,null,null,"%",2,"STOOQ",null,null,null);}).join("");
+  const commRows=COMM.map(c=>{const q=state.data.comm[c.l];return dataRow(c.l,q?.price,q?.change,q?.pct," USD",2,null,null,c.s,c.l);}).join("");
+  return `<div class="sec-header"><span>🏛️</span><span class="sec-title">Government Bond Yields</span></div>${usBonds}${ukBonds}
+  <div style="margin-top:11px"><div class="sec-header"><span>🛢️</span><span class="sec-title">Crude Oil</span></div>${hint}${commRows}</div>`;
+}
+function panelStocks(){
+  const hint=`<div style="font-size:.52rem;color:#2a5570;margin-bottom:6px;letter-spacing:.06em">TAP ROW TO CHART</div>`;
+  const rows=state.tickers.map(t=>{const q=state.data.stocks[t];return dataRow(t,q?.price,q?.change,q?.pct,"",2,null,null,t,t);}).join("");
+  const chips=state.tickers.map(t=>`<div style="display:flex;align-items:center;gap:3px;background:#0d2035;border:1px solid #1a3550;border-radius:3px;padding:2px 6px">
+    <span class="mono" style="font-size:.68rem;color:#8ba8c4">${t}</span>
+    <button onclick="removeTicker('${t}')" style="background:none;border:none;color:#ff4d4d;font-size:.68rem;padding:0;line-height:1">✕</button>
+  </div>`).join("");
+  return `<div class="sec-header"><span>📈</span><span class="sec-title">Stocks</span></div>${hint}${rows}
+  <div style="margin-top:9px">
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <input id="ticker-input" class="mono" placeholder="Add ticker e.g. TSLA" value="${state.tickerInput}"
+        oninput="state.tickerInput=this.value.toUpperCase();this.value=state.tickerInput"
+        onkeydown="if(event.key==='Enter')addTicker()"
+        style="flex:1;background:#060e14;border:1px solid #1e3347;border-radius:4px;padding:5px 8px;color:#8ba8c4;font-size:.73rem;outline:none"/>
+      <button onclick="addTicker()" style="background:#0e3a5a;border:1px solid #1a5a8a;border-radius:4px;color:#5ab0e0;padding:5px 10px;font-size:.7rem">ADD</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">${chips}</div>
+  </div>`;
+}
+function panelNews(){
+  const tickerStr=state.news.map(a=>`${a.tag?"["+a.tag.toUpperCase()+"] ":""}${a.headline}`).join("   ·   ");
+  const articles=state.news.map((a,i)=>{
+    const tc=tagColor(a.tag);
+    return `<div class="news-row" onclick="window.open('${a.url}','_blank')">
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
+        <span class="badge mono" style="background:${tc}18;color:${tc};border:1px solid ${tc}40;flex-shrink:0">${(a.tag||"NEWS").toUpperCase()}</span>
+        <span class="mono" style="font-size:.52rem;color:#2a5570">${a.source||""}${a.datetime?" · "+fmtAgo(a.datetime):""}</span>
+        <span style="margin-left:auto;font-size:.58rem;color:#2a5a7a;flex-shrink:0">↗</span>
+      </div>
+      <div class="mono" style="font-size:.72rem;color:#c8d8e8;line-height:1.4">${a.headline}</div>
+      ${a.summary?`<div class="mono" style="font-size:.62rem;color:#4a6a8a;line-height:1.35;margin-top:3px">${a.summary.slice(0,130)}${a.summary.length>130?"…":""}</div>`:""}
+    </div>`;
+  }).join("");
+  const lastStr=state.newsLast?state.newsLast.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
+  return `<div class="sec-header">
+    <span>📰</span><span class="sec-title">Market News</span>
+    <span style="margin-left:auto;font-size:.52rem;color:#2a5570">${state.newsLoading?'<span style="animation:pulse 1s ease infinite;display:inline-block">FETCHING…</span>':lastStr}</span>
+    <button onclick="fetchNews()" style="background:transparent;border:1px solid #1a2d3e;border-radius:3px;color:#3a6a8a;padding:2px 5px;font-size:.58rem;margin-left:6px">↻</button>
+  </div>
+  ${state.news.length>0?`<div style="background:#07111a;border-radius:4px;padding:5px 8px;margin-bottom:9px;border:1px solid #0e1d28;overflow:hidden">
+    <div class="ticker-wrap"><div class="ticker-inner">${tickerStr}   ·   ${tickerStr}</div></div>
+  </div>`:""}
+  <div style="overflow-y:auto;max-height:400px">
+    ${state.newsLoading&&state.news.length===0?'<div style="padding:18px 0;text-align:center;color:#2a5570;font-size:.7rem;animation:pulse 1.2s ease infinite">LOADING NEWS…</div>':""}
+    ${!state.newsLoading&&state.news.length===0?'<div style="padding:18px 0;text-align:center;color:#2a5570;font-size:.7rem">NO ARTICLES FOUND</div>':""}
+    ${articles}
+  </div>`;
+}
+
+const panelBuilders={
+  "indices":panelIndices,
+  "fx-crypto":panelFxCrypto,
+  "bonds-oil":panelBondsOil,
+  "stocks":panelStocks,
+  "news":panelNews
+};
+
+/* ── Drag ── */
+function onDragStart(i){state.drag.from=i;render();}
+function onDragOver(e,i){e.preventDefault();if(state.drag.over!==i){state.drag.over=i;render();}}
+function onDrop(e,i){
+  e.preventDefault();
+  const{from}=state.drag;
+  if(from!==null&&from!==i){
+    const p=[...state.panels];const[m]=p.splice(from,1);p.splice(i,0,m);
+    state.panels=p;LS.set("ppmm_panels",p);flash();
+  }
+  state.drag={from:null,over:null};render();
+}
+function onDragEnd(){state.drag={from:null,over:null};render();}
+
+/* ── Chart ── */
+function openChart(sym,label){setState({chart:{s:sym,l:label,finnhub:sym},chartRes:"15"});fetchChart();}
+function closeChart(e){if(!e||e.target.classList.contains("modal-bg"))setState({chart:null,chartCandles:[],chartError:false});}
+function setChartRes(r){state.chartRes=r;fetchChart();}
+
+/* ── Tickers ── */
+function addTicker(){
+  const t=state.tickerInput.trim();
+  if(t&&!state.tickers.includes(t)){
+    state.tickers=[...state.tickers,t];
+    LS.set("ppmm_tickers",state.tickers);
+    state.tickerInput="";
+    flash();fetchAllData();
+  }
+}
+function removeTicker(t){
+  state.tickers=state.tickers.filter(x=>x!==t);
+  LS.set("ppmm_tickers",state.tickers);
+  flash();render();
+}
+function flash(){
+  if(savedTimer)clearTimeout(savedTimer);
+  setState({savedFlash:true});
+  savedTimer=setTimeout(()=>setState({savedFlash:false}),1400);
+}
+
+/* ── Device ── */
+function setDevice(d){state.device=d;LS.set("ppmm_device",d);render();}
+function setRefresh(v){state.refresh=+v;LS.set("ppmm_refresh",+v);scheduleRefresh();render();}
+
+/* ── Render ── */
+function render(){
+  const d=DEVICES[state.device];
+  const fmtCd=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+  const lastStr=state.lastUp?state.lastUp.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
+
+  // validate panels
+  const validPanels=state.panels.filter(id=>PANEL_IDS.includes(id));
+  const missing=PANEL_IDS.filter(id=>!validPanels.includes(id));
+  const allPanels=[...validPanels,...missing];
+
+  // build panels
+  const panelCols=d.w?d.cols:0;
+  const gridStyle=panelCols===0
+    ?`display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px`
+    :`display:grid;grid-template-columns:repeat(${panelCols},1fr);gap:10px`;
+
+  const panelsHtml=allPanels.map((id,idx)=>{
+    const isDragOver=state.drag.over===idx&&state.drag.from!==idx;
+    const isDragging=state.drag.from===idx;
+    const cls=`panel${isDragOver?" drag-over":""}${isDragging?" dragging":""}`;
+    const content=(panelBuilders[id]||panelIndices)();
+    return `<div class="${cls}" draggable="true"
+      ondragstart="onDragStart(${idx})"
+      ondragover="onDragOver(event,${idx})"
+      ondrop="onDrop(event,${idx})"
+      ondragend="onDragEnd()">
+      <div class="drag-dots">${[0,1,2,3,4,5].map(()=>`<div class="drag-dot"></div>`).join("")}</div>
+      ${content}
+    </div>`;
+  }).join("");
+
+  // device switcher
+  const devBtns=Object.entries(DEVICES).map(([k,v])=>`
+    <button class="dev-btn${state.device===k?" active":""}" onclick="setDevice('${k}')">
+      <span style="font-size:.6rem">${v.icon}</span><span>${k}</span>${state.device===k?`<span style="font-size:.38rem;color:#00d084">●</span>`:""}
+    </button>`).join("");
+
+  // inner dashboard
+  const dashHtml=`
+    <div class="header">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:${d.hfs};letter-spacing:.18em;color:#5ab0e0;line-height:1">PPMM</div>
+          <div class="mono" style="font-size:.48rem;color:#3a6a8a;letter-spacing:.1em;margin-top:1px">PRIVATE MARKETS MONITOR</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:${state.device==="iPhone 16"?6:12}px">
+          ${state.device!=="iPhone 16"?`<div style="display:flex;align-items:center;gap:4px">
+            <span class="mono" style="font-size:.52rem;color:#3a6a8a">REFRESH</span>
+            <input type="range" min="1" max="30" value="${state.refresh}" oninput="setRefresh(this.value)" style="width:52px"/>
+            <span class="mono" style="font-size:.63rem;color:#5ab0e0;min-width:24px">${state.refresh}m</span>
+          </div>`:""}
+          <div style="text-align:right">
+            <div style="display:flex;align-items:center;gap:3px">
+              <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${state.loading?"#f0a030":"#00d084"};box-shadow:${state.loading?"none":"0 0 6px #00d084"};margin-right:5px"></span>
+              <span class="mono" style="font-size:.56rem;color:${state.loading?"#f0a030":"#00d084"};letter-spacing:.08em">${state.loading?"…":"LIVE"}</span>
+            </div>
+            ${state.lastUp?`<div class="mono" style="font-size:.48rem;color:#3a6a8a">${lastStr} · ${fmtCd(state.countdown)}</div>`:""}
+          </div>
+          <button onclick="fetchAllData()" ${state.loading?"disabled":""} style="background:${state.loading?"#0a1e2e":"#0e3a5a"};border:1px solid #1a5a8a;border-radius:4px;color:${state.loading?"#2a5a7a":"#5ab0e0"};padding:4px 8px;font-size:.6rem">↻</button>
+        </div>
+      </div>
+      ${state.device==="iPhone 16"?`<div style="display:flex;align-items:center;gap:4px;margin-top:5px">
+        <span class="mono" style="font-size:.5rem;color:#3a6a8a">REFRESH</span>
+        <input type="range" min="1" max="30" value="${state.refresh}" oninput="setRefresh(this.value)" style="flex:1"/>
+        <span class="mono" style="font-size:.62rem;color:#5ab0e0;min-width:24px">${state.refresh}m</span>
+      </div>`:""}
+    </div>
+    <div class="hint-bar">
+      <span>⠿ DRAG</span><span>·</span><span>📈 CHART</span><span>·</span><span>📰 NEWS</span>
+      ${state.savedFlash?`<span style="color:#00d084;margin-left:auto">✓ SAVED</span>`:""}
+    </div>
+    <div class="screen-inner">
+      <div style="${gridStyle}">${panelsHtml}</div>
+    </div>
+    <div class="footer">FINNHUB · FRED · STOOQ · INFORMATIONAL USE ONLY</div>`;
+
+  // device frame
+  let frameHtml;
+  if(!d.w){
+    frameHtml=`<div style="flex:1;overflow:auto;display:flex;flex-direction:column;background:#060d13">${dashHtml}</div>`;
+  }else{
+    const notch=state.device==="iPhone 16"?`<div style="position:absolute;top:${d.bezel+9}px;left:50%;transform:translateX(-50%);width:116px;height:32px;background:#000;border-radius:18px;z-index:10"></div>`:"";
+    const camera=state.device==="iPad Air"?`<div style="position:absolute;top:50%;left:${d.bezel/2}px;transform:translateY(-50%);width:5px;height:5px;background:#222;border-radius:50%;border:1px solid #333"></div>`:"";
+    const homeBar=state.device==="iPhone 16"?`<div style="height:4px;width:90px;background:#333;border-radius:2px;margin:7px auto 0"></div>`:"";
+    frameHtml=`<div class="frame-wrap">
+      <div style="width:${d.w+d.bezel*2}px;background:${state.device==="iPhone 16"?"#1a1a1e":"#1c2028"};border-radius:${d.radius+d.bezel}px;padding:${d.bezel}px;box-shadow:0 28px 70px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.06);position:relative">
+        ${notch}${camera}
+        <div class="screen" style="width:${d.w}px;height:${d.h}px;border-radius:${d.radius-3}px">${dashHtml}</div>
+        ${homeBar}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById("app").innerHTML=`
+    ${state.chart?renderChartModal():""}
+    <div class="device-bar">
+      <span class="mono" style="font-size:.48rem;color:#2a5570;letter-spacing:.1em;margin-right:3px">VIEW</span>
+      ${devBtns}
+      <span class="mono" style="margin-left:auto;font-size:.45rem;color:#1a3050;letter-spacing:.06em">AUTO-SAVED</span>
+    </div>
+    ${frameHtml}`;
+
+  // restore ticker input cursor
+  const ti=document.getElementById("ticker-input");
+  if(ti){const len=ti.value.length;ti.setSelectionRange(len,len);}
+}
+
+/* ── Init ── */
+(async function init(){
+  // ensure panels include new "news" panel if missing from saved state
+  const saved=LS.get("ppmm_panels",PANEL_IDS);
+  if(!saved.includes("news"))saved.push("news");
+  state.panels=saved;
+
+  render();
+  scheduleCountdown();
+  await fetchAllData();
+  scheduleRefresh();
+  fetchNews();
+
+  // keyboard
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&state.chart)setState({chart:null,chartCandles:[],chartError:false});});
+})();
 </script>
 </body>
 </html>
+
