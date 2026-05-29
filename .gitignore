@@ -11,16 +11,10 @@ __pycache__/
 # Test output
 test_results.txt
 final_test_results.txt
+symbol_test_results.txt
 
 # macOS
 .DS_Store
-
-# Leftover scratch files from early exploration
-files.zip
-finnhub-test.html
-markets-dashboard.jsx
-/ppmm.html
-symbol_test_results.txt
 
 # Editors
 .idea/
