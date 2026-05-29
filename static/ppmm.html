@@ -402,7 +402,8 @@ function render(){
     const isDragging=state.drag.from===idx;
     const cls=`panel${isDragOver?" drag-over":""}${isDragging?" dragging":""}`;
     const content=(panelBuilders[id]||panelIndices)();
-    return `<div class="${cls}" draggable="true"
+    const spanStyle=(id==="news"&&panelCols>1)?"style=\"grid-column:1/-1\"":" ";
+    return `<div class="${cls}" draggable="true" ${spanStyle}
       ondragstart="onDragStart(${idx})"
       ondragover="onDragOver(event,${idx})"
       ondrop="onDrop(event,${idx})"
