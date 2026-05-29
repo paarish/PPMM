@@ -170,7 +170,11 @@ function scheduleRefresh(){
 }
 function scheduleCountdown(){
   if(countdownTimer)clearInterval(countdownTimer);
-  countdownTimer=setInterval(()=>{setState({countdown:Math.max(0,state.countdown-1)});},1000);
+  countdownTimer=setInterval(()=>{
+    state.countdown=Math.max(0,state.countdown-1);
+    const el=document.getElementById("ppmm-cd");
+    if(el)el.textContent=state.lastUp?state.lastUp.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})+" · "+fmtCd(state.countdown):"";
+  },1000);
 }
 
 
@@ -349,7 +353,7 @@ function render(){
               <span class="mono" style="font-size:.56rem;color:${col};letter-spacing:.08em">${lbl}</span>`;
             })()}
             </div>
-            ${state.lastUp?`<div class="mono" style="font-size:.48rem;color:#3a6a8a">${lastStr} · ${fmtCd(state.countdown)}</div>`:""}
+            <div id="ppmm-cd" class="mono" style="font-size:.48rem;color:#3a6a8a">${state.lastUp?`${lastStr} · ${fmtCd(state.countdown)}`:""}</div>
           </div>
           <button onclick="fetchAllData()" ${state.loading?"disabled":""} style="background:${state.loading?"#0a1e2e":"#0e3a5a"};border:1px solid #1a5a8a;border-radius:4px;color:${state.loading?"#2a5a7a":"#5ab0e0"};padding:4px 8px;font-size:.6rem">↻</button>
         </div>
