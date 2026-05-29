@@ -64,17 +64,13 @@ fx:
     gf_ticker: "GBP-USD"
     decimals: 4
 
-  - label: "EUR/USD"
-    gf_ticker: "EUR-USD"
-    decimals: 4
-
-  - label: "USD/JPY"
-    gf_ticker: "USD-JPY"
-    decimals: 2
-
   - label: "EUR/GBP"
     gf_ticker: "EUR-GBP"
     decimals: 4
+
+  - label: "GBP/INR"
+    gf_ticker: "GBP-INR"
+    decimals: 2
 
 # ─── Commodities & Energy ─────────────────────────────────────────────────────
 # W00 = nearest-month continuous contract.
