@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="PPMM"/>
+<meta name="theme-color" content="#060d13"/>
+<title>PPMM</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%;background:#030810;font-family:'IBM Plex Mono',monospace;color:#e8eef4;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:#060d13}::-webkit-scrollbar-thumb{background:#1a3050;border-radius:2px}
+input[type=range]{-webkit-appearance:none;appearance:none;height:3px;background:#1a3050;border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;background:#5ab0e0;border-radius:50%;cursor:pointer}
+input::placeholder{color:#2a4a6a}
+button{font-family:'IBM Plex Mono',monospace;cursor:pointer}
+a{color:inherit;text-decoration:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes tickerMove{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.panel{background:linear-gradient(145deg,#0d1b26,#0a1520);border:1px solid #1a2d3e;border-radius:8px;padding:13px 14px;box-shadow:0 4px 18px rgba(0,0,0,.4);position:relative;animation:fadeIn .35s ease both}
+.panel:hover .drag-dots{opacity:.3}
+.drag-dots{position:absolute;top:8px;right:9px;display:grid;grid-template-columns:1fr 1fr;gap:3px;opacity:.15;pointer-events:none;transition:opacity .2s}
+.drag-dot{width:3px;height:3px;border-radius:50%;background:#5ab0e0}
+.panel.drag-over{background:linear-gradient(145deg,#112840,#0d2030);border:1.5px dashed #5ab0e0;box-shadow:0 0 18px rgba(90,176,224,.15)}
+.panel.dragging{opacity:.4}
+.row{display:flex;justify-content:space-between;align-items:center;padding:5px 5px;border-bottom:1px solid #0a1318;transition:background .1s;margin:0 -5px;border-radius:3px}
+.row.clickable{cursor:pointer}
+.row.clickable:hover{background:rgba(90,176,224,.04)}
+.sec-header{display:flex;align-items:center;gap:8px;margin-bottom:9px;padding-bottom:6px;border-bottom:1px solid #1e2d3d}
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:.9rem;letter-spacing:.15em;color:#8ba8c4}
+.mono{font-family:'IBM Plex Mono',monospace}
+.up{color:#00d084}.dn{color:#ff4d4d}.dim{color:#334}
+.badge{font-size:.5rem;padding:1px 4px;border-radius:3px;letter-spacing:.04em}
+.ticker-wrap{overflow:hidden;white-space:nowrap}
+.ticker-inner{display:inline-block;animation:tickerMove 70s linear infinite;font-size:.6rem;color:#5ab0e0;letter-spacing:.03em}
+.ticker-inner:hover{animation-play-state:paused}
+.modal-bg{position:fixed;inset:0;z-index:9999;background:rgba(3,8,14,.92);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.modal{background:linear-gradient(160deg,#0d1f2e,#080f18);border:1px solid #1e3a50;border-radius:12px;width:min(820px,95vw);max-height:90vh;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.8);animation:fadeIn .22s ease}
+.device-bar{background:#060d13;border-bottom:1px solid #1a2d3e;padding:4px 12px;display:flex;align-items:center;justify-content:center;gap:4px}
+.dev-btn{background:transparent;border:1px solid #131f2b;border-radius:3px;color:#2a5570;padding:2px 7px;font-size:.54rem;letter-spacing:.04em;transition:all .15s;display:flex;align-items:center;gap:3px}
+.dev-btn.active{background:#0e3a5a;border-color:#1a5a8a;color:#5ab0e0}
+.hint-bar{background:#07111a;border-bottom:1px solid #0d1c28;padding:3px 14px;font-size:.5rem;color:#2a5a74;letter-spacing:.07em;display:flex;gap:8px;align-items:center}
+.grid{display:grid;gap:10px}
+.header{background:linear-gradient(90deg,#060d13,#0a1a28,#060d13);border-bottom:1px solid #1a2d3e;padding:10px 15px;flex-shrink:0}
+.footer{text-align:center;padding:5px;font-size:.46rem;color:#1e3a50;letter-spacing:.08em;border-top:1px solid #0e1d28;flex-shrink:0}
+.news-row{padding:7px 4px;border-bottom:1px solid #0a151e;cursor:pointer;transition:background .1s}
+.news-row:hover{background:rgba(90,176,224,.04)}
+#app{display:flex;flex-direction:column;min-height:100vh}
+.frame-wrap{display:flex;justify-content:center;align-items:flex-start;padding:18px 0 32px;background:#030810;flex:1;overflow:auto}
+.screen{overflow:hidden;background:#060d13;display:flex;flex-direction:column}
+.screen-inner{flex:1;overflow-y:auto;padding:10px 11px 20px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const LS={get:(k,fb)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):fb;}catch{return fb;}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}};
+
+const DEVICES={
+  "iPad Air": {icon:"⬜",w:820,h:1180,cols:2,radius:20,bezel:14,hfs:"1.4rem"},
+  "iPhone 16":{icon:"📱",w:393,h:852, cols:1,radius:50,bezel:10,hfs:"1.05rem"},
+  "Mac":      {icon:"💻",w:null,h:null,cols:0,radius:0, bezel:0, hfs:"1.5rem"}
+};
+const PANEL_IDS=["indices","fx-crypto","bonds-oil","stocks"];
+const INDICES=[
+  {l:"S&P 500",  vix:false},
+  {l:"NASDAQ",   vix:false},
+  {l:"FTSE 100", vix:false},
+  {l:"DAX",      vix:false},
+  {l:"Nikkei 225",vix:false},
+  {l:"Hang Seng",vix:false},
+  {l:"VIX",      vix:true}
+];
+const FX=[
+  {l:"GBP/USD",dec:4},
+  {l:"EUR/USD",dec:4},
+  {l:"USD/JPY",dec:2},
+  {l:"EUR/GBP",dec:4}
+];
+const COMM=[
+  {l:"Brent Crude",dec:2,unit:" USD"},
+  {l:"WTI Crude",  dec:2,unit:" USD"},
+  {l:"Gold",       dec:2,unit:" USD"},
+  {l:"TTF Gas",    dec:3,unit:" EUR"},
+  {l:"Henry Hub",  dec:3,unit:" USD"},
+];
+const CRYPTO=[{l:"Bitcoin"}];
+
+const fmt=(n,d=2)=>{if(n==null||isNaN(n))return"—";return Number(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});};
+const chipArrow=v=>v>=0?"▲":"▼";
+
+/* ── State ── */
+let state={
+  device:LS.get("ppmm_device","iPad Air"),
+  panels:LS.get("ppmm_panels",PANEL_IDS),
+  tickers:LS.get("ppmm_tickers",["Apple","Barclays"]),
+  refresh:LS.get("ppmm_refresh",5),
+  data:{indices:{},fx:{},comm:{},crypto:{},bonds:{},stocks:{}},
+  loading:false,serverConnecting:false,lastUp:null,countdown:0,stale:false,cookiesValid:true,
+  savedFlash:false,
+  drag:{from:null,over:null},
+  tickerInput:""
+};
+let refreshTimer=null,countdownTimer=null,savedTimer=null;
+
+function setState(patch){Object.assign(state,patch);render();}
+
+/* ── Backend API calls ── */
+let _retryTimer=null;
+
+function transformPayload(raw){
+  // Convert backend format → frontend state.data shape
+  const data={indices:{},fx:{},comm:{},crypto:{},bonds:{},stocks:{}};
+  for(const[l,d]of Object.entries(raw.indices||{}))data.indices[l]={price:d.price,change:d.change,pct:d.changePct};
+  // VIX lives separately on backend — merge into indices so the VIX row works
+  for(const[l,d]of Object.entries(raw.vix||{}))data.indices[l]={price:d.price,change:d.change,pct:d.changePct};
+  for(const[l,d]of Object.entries(raw.fx||{}))data.fx[l]={price:d.price,change:d.change,pct:d.changePct};
+  // backend key is "commodities", frontend uses "comm"
+  for(const[l,d]of Object.entries(raw.commodities||{}))data.comm[l]={price:d.price,change:d.change,pct:d.changePct};
+  for(const[l,d]of Object.entries(raw.crypto||{}))data.crypto[l]={price:d.price,change:d.change,pct:d.changePct};
+  for(const[l,d]of Object.entries(raw.bonds||{}))data.bonds[l]={price:d.price,change:d.change,pct:d.changePct};
+  // Stocks: backend keyed by label ("Apple", "Barclays").  state.tickers uses labels too.
+  const byLabel={};
+  for(const[label,d]of Object.entries(raw.stocks?.us||{}))byLabel[label]=d;
+  for(const[label,d]of Object.entries(raw.stocks?.uk||{}))byLabel[label]=d;
+  for(const t of state.tickers){const d=byLabel[t];if(d)data.stocks[t]={price:d.price,change:d.change,pct:d.changePct};}
+  return data;
+}
+
+async function fetchHealth(){
+  try{
+    const r=await fetch("/api/health");
+    if(!r.ok)return;
+    const h=await r.json();
+    setState({stale:!!h.stale,cookiesValid:h.cookies_valid!==false});
+  }catch{}
+}
+
+async function fetchAllData(){
+  setState({loading:true});
+  try{
+    const r=await fetch("/api/data");
+    if(r.status===202){
+      // Backend first-fetch still in progress — retry in 10 s
+      setState({loading:false,serverConnecting:true});
+      if(_retryTimer)clearTimeout(_retryTimer);
+      _retryTimer=setTimeout(fetchAllData,10000);
+      return;
+    }
+    if(!r.ok)throw new Error(`HTTP ${r.status}`);
+    const raw=await r.json();
+    const data=transformPayload(raw);
+    setState({data,loading:false,serverConnecting:false,lastUp:new Date(),countdown:state.refresh*60});
+    fetchHealth();
+  }catch(e){
+    console.error("fetchAllData:",e);
+    setState({loading:false,serverConnecting:false});
+  }
+}
+
+
+function scheduleRefresh(){
+  if(refreshTimer)clearInterval(refreshTimer);
+  refreshTimer=setInterval(()=>{fetchAllData();},state.refresh*60*1000);
+}
+function scheduleCountdown(){
+  if(countdownTimer)clearInterval(countdownTimer);
+  countdownTimer=setInterval(()=>{setState({countdown:Math.max(0,state.countdown-1)});},1000);
+}
+
+
+/* ── Row builder ── */
+function dataRow(label,value,change,pct,unit="",dec=2,badge,badgeColor){
+  const chipHtml=(change!=null||pct!=null)?`<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:1px">
+    ${change!=null?`<span class="mono ${change>=0?"up":"dn"}" style="font-size:.7rem">${chipArrow(change)} ${Math.abs(change).toFixed(2)}</span>`:""}
+    ${pct!=null?`<span class="mono ${pct>=0?"up":"dn"}" style="font-size:.7rem">${chipArrow(pct)} ${Math.abs(pct).toFixed(2)}%</span>`:""}
+  </div>`:"";
+  const badgeHtml=badge?`<span class="badge mono" style="background:${badgeColor?badgeColor+"22":"#1a2d3e"};color:${badgeColor||"#5a8cb0"};border:1px solid ${badgeColor?badgeColor+"55":"transparent"}">${badge}</span>`:"";
+  return `<div class="row">
+    <div style="display:flex;align-items:center;gap:4px"><span class="mono" style="font-size:.73rem;color:#8ba8c4">${label}</span>${badgeHtml}</div>
+    <div style="text-align:right">
+      <div class="mono" style="font-size:.84rem;color:#e8eef4">${value!=null?fmt(value,dec)+unit:'<span class="dim">—</span>'}</div>
+      ${chipHtml}
+    </div>
+  </div>`;
+}
+
+/* ── Panel content builders ── */
+function panelIndices(){
+  const rows=INDICES.map(i=>{
+    const q=state.data.indices[i.l];
+    const vv=i.vix?q?.price:null;
+    const vl=vv==null?null:vv<15?{l:"LOW FEAR",c:"#00d084"}:vv<25?{l:"MODERATE",c:"#f0a030"}:vv<35?{l:"HIGH FEAR",c:"#ff7040"}:{l:"EXTREME",c:"#ff4d4d"};
+    const dec=(i.l.includes("Nikkei")||i.l.includes("Hang"))?0:2;
+    return dataRow(i.l,q?.price,i.vix?null:q?.change,i.vix?null:q?.pct,"",dec,vl?.l,vl?.c);
+  }).join("");
+  return `<div class="sec-header"><span>🌍</span><span class="sec-title">Global Equity Indices</span></div>${rows}`;
+}
+function panelFxCrypto(){
+  const fxRows=FX.map(p=>{const q=state.data.fx[p.l];return dataRow(p.l,q?.price,q?.change,q?.pct,"",p.dec);}).join("");
+  const crRows=CRYPTO.map(c=>{const q=state.data.crypto[c.l];return dataRow(c.l,q?.price,q?.change,q?.pct," USD",0);}).join("");
+  return `<div class="sec-header"><span>💱</span><span class="sec-title">FX Rates</span></div>${fxRows}
+  <div style="margin-top:11px"><div class="sec-header"><span>₿</span><span class="sec-title">Cryptocurrency</span></div>${crRows}</div>`;
+}
+function bondSource(l){
+  if(l==="US 10Y")return"GF";
+  return"FRED";
+}
+function panelBondsOil(){
+  const bonds=["US 2Y","US 10Y","UK 10Y"].map(l=>{
+    const q=state.data.bonds[l];
+    const src=bondSource(l);
+    const pct=src==="GF"?q?.pct:null;  // FRED has no daily change
+    return dataRow(l,q?.price,null,pct,"%",3,src,"#3a6a8a");
+  }).join("");
+  const commRows=COMM.map(c=>{const q=state.data.comm[c.l];return dataRow(c.l,q?.price,q?.change,q?.pct,c.unit,c.dec);}).join("");
+  return `<div class="sec-header"><span>🏛️</span><span class="sec-title">Government Bond Yields</span></div>${bonds}
+  <div style="margin-top:11px"><div class="sec-header"><span>⚡</span><span class="sec-title">Energy &amp; Commodities</span></div>${commRows}</div>`;
+}
+function panelStocks(){
+  const rows=state.tickers.map(t=>{const q=state.data.stocks[t];return dataRow(t,q?.price,q?.change,q?.pct,"",2);}).join("");
+  const chips=state.tickers.map(t=>`<div style="display:flex;align-items:center;gap:3px;background:#0d2035;border:1px solid #1a3550;border-radius:3px;padding:2px 6px">
+    <span class="mono" style="font-size:.68rem;color:#8ba8c4">${t}</span>
+    <button onclick="removeTicker('${t}')" style="background:none;border:none;color:#ff4d4d;font-size:.68rem;padding:0;line-height:1">✕</button>
+  </div>`).join("");
+  return `<div class="sec-header"><span>📈</span><span class="sec-title">Stocks</span></div>${rows}
+  <div style="margin-top:9px">
+    <div style="display:flex;gap:6px;margin-bottom:6px">
+      <input id="ticker-input" class="mono" placeholder="Label e.g. Apple" value="${state.tickerInput}"
+        oninput="state.tickerInput=this.value;this.value=state.tickerInput"
+        onkeydown="if(event.key==='Enter')addTicker()"
+        style="flex:1;background:#060e14;border:1px solid #1e3347;border-radius:4px;padding:5px 8px;color:#8ba8c4;font-size:.73rem;outline:none"/>
+      <button onclick="addTicker()" style="background:#0e3a5a;border:1px solid #1a5a8a;border-radius:4px;color:#5ab0e0;padding:5px 10px;font-size:.7rem">ADD</button>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:4px">${chips}</div>
+  </div>`;
+}
+
+const panelBuilders={
+  "indices":panelIndices,
+  "fx-crypto":panelFxCrypto,
+  "bonds-oil":panelBondsOil,
+  "stocks":panelStocks,
+};
+
+/* ── Drag ── */
+function onDragStart(i){state.drag.from=i;render();}
+function onDragOver(e,i){e.preventDefault();if(state.drag.over!==i){state.drag.over=i;render();}}
+function onDrop(e,i){
+  e.preventDefault();
+  const{from}=state.drag;
+  if(from!==null&&from!==i){
+    const p=[...state.panels];const[m]=p.splice(from,1);p.splice(i,0,m);
+    state.panels=p;LS.set("ppmm_panels",p);flash();
+  }
+  state.drag={from:null,over:null};render();
+}
+function onDragEnd(){state.drag={from:null,over:null};render();}
+
+/* ── Tickers ── */
+function addTicker(){
+  const t=state.tickerInput.trim();
+  if(t&&!state.tickers.includes(t)){
+    state.tickers=[...state.tickers,t];
+    LS.set("ppmm_tickers",state.tickers);
+    state.tickerInput="";
+    flash();fetchAllData();
+  }
+}
+function removeTicker(t){
+  state.tickers=state.tickers.filter(x=>x!==t);
+  LS.set("ppmm_tickers",state.tickers);
+  flash();render();
+}
+function flash(){
+  if(savedTimer)clearTimeout(savedTimer);
+  setState({savedFlash:true});
+  savedTimer=setTimeout(()=>setState({savedFlash:false}),1400);
+}
+
+/* ── Device ── */
+function setDevice(d){state.device=d;LS.set("ppmm_device",d);render();}
+function setRefresh(v){state.refresh=+v;LS.set("ppmm_refresh",+v);scheduleRefresh();render();}
+
+/* ── Render ── */
+function render(){
+  const d=DEVICES[state.device];
+  const fmtCd=s=>`${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`;
+  const lastStr=state.lastUp?state.lastUp.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
+
+  // validate panels
+  const validPanels=state.panels.filter(id=>PANEL_IDS.includes(id));
+  const missing=PANEL_IDS.filter(id=>!validPanels.includes(id));
+  const allPanels=[...validPanels,...missing];
+
+  // build panels
+  const panelCols=d.w?d.cols:0;
+  const gridStyle=panelCols===0
+    ?`display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px`
+    :`display:grid;grid-template-columns:repeat(${panelCols},1fr);gap:10px`;
+
+  const panelsHtml=allPanels.map((id,idx)=>{
+    const isDragOver=state.drag.over===idx&&state.drag.from!==idx;
+    const isDragging=state.drag.from===idx;
+    const cls=`panel${isDragOver?" drag-over":""}${isDragging?" dragging":""}`;
+    const content=(panelBuilders[id]||panelIndices)();
+    return `<div class="${cls}" draggable="true"
+      ondragstart="onDragStart(${idx})"
+      ondragover="onDragOver(event,${idx})"
+      ondrop="onDrop(event,${idx})"
+      ondragend="onDragEnd()">
+      <div class="drag-dots">${[0,1,2,3,4,5].map(()=>`<div class="drag-dot"></div>`).join("")}</div>
+      ${content}
+    </div>`;
+  }).join("");
+
+  // device switcher
+  const devBtns=Object.entries(DEVICES).map(([k,v])=>`
+    <button class="dev-btn${state.device===k?" active":""}" onclick="setDevice('${k}')">
+      <span style="font-size:.6rem">${v.icon}</span><span>${k}</span>${state.device===k?`<span style="font-size:.38rem;color:#00d084">●</span>`:""}
+    </button>`).join("");
+
+  // inner dashboard
+  const dashHtml=`
+    <div class="header">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:${d.hfs};letter-spacing:.18em;color:#5ab0e0;line-height:1">PPMM</div>
+          <div class="mono" style="font-size:.48rem;color:#3a6a8a;letter-spacing:.1em;margin-top:1px">PRIVATE MARKETS MONITOR</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:${state.device==="iPhone 16"?6:12}px">
+          ${state.device!=="iPhone 16"?`<div style="display:flex;align-items:center;gap:4px">
+            <span class="mono" style="font-size:.52rem;color:#3a6a8a">REFRESH</span>
+            <input type="range" min="1" max="30" value="${state.refresh}" oninput="setRefresh(this.value)" style="width:52px"/>
+            <span class="mono" style="font-size:.63rem;color:#5ab0e0;min-width:24px">${state.refresh}m</span>
+          </div>`:""}
+          <div style="text-align:right">
+            <div style="display:flex;align-items:center;gap:3px">${(()=>{
+              const busy=state.loading||state.serverConnecting;
+              const col=busy?"#f0a030":!state.cookiesValid?"#ff4d4d":state.stale?"#f0a030":"#00d084";
+              const glow=(!busy&&state.cookiesValid&&!state.stale)?"0 0 6px #00d084":"none";
+              const lbl=state.serverConnecting?"CONNECTING":state.loading?"…":!state.cookiesValid?"NO COOKIES":state.stale?"STALE":"LIVE";
+              return `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};box-shadow:${glow};margin-right:5px"></span>
+              <span class="mono" style="font-size:.56rem;color:${col};letter-spacing:.08em">${lbl}</span>`;
+            })()}
+            </div>
+            ${state.lastUp?`<div class="mono" style="font-size:.48rem;color:#3a6a8a">${lastStr} · ${fmtCd(state.countdown)}</div>`:""}
+          </div>
+          <button onclick="fetchAllData()" ${state.loading?"disabled":""} style="background:${state.loading?"#0a1e2e":"#0e3a5a"};border:1px solid #1a5a8a;border-radius:4px;color:${state.loading?"#2a5a7a":"#5ab0e0"};padding:4px 8px;font-size:.6rem">↻</button>
+        </div>
+      </div>
+      ${state.device==="iPhone 16"?`<div style="display:flex;align-items:center;gap:4px;margin-top:5px">
+        <span class="mono" style="font-size:.5rem;color:#3a6a8a">REFRESH</span>
+        <input type="range" min="1" max="30" value="${state.refresh}" oninput="setRefresh(this.value)" style="flex:1"/>
+        <span class="mono" style="font-size:.62rem;color:#5ab0e0;min-width:24px">${state.refresh}m</span>
+      </div>`:""}
+    </div>
+    <div class="hint-bar">
+      <span>⠿ DRAG TO REORDER</span>
+      ${state.savedFlash?`<span style="color:#00d084;margin-left:auto">✓ SAVED</span>`:""}
+    </div>
+    <div class="screen-inner">
+      <div style="${gridStyle}">${panelsHtml}</div>
+    </div>
+    <div class="footer">GOOGLE FINANCE · FRED · INFORMATIONAL USE ONLY</div>`;
+
+  // device frame
+  let frameHtml;
+  if(!d.w){
+    frameHtml=`<div style="flex:1;overflow:auto;display:flex;flex-direction:column;background:#060d13">${dashHtml}</div>`;
+  }else{
+    const notch=state.device==="iPhone 16"?`<div style="position:absolute;top:${d.bezel+9}px;left:50%;transform:translateX(-50%);width:116px;height:32px;background:#000;border-radius:18px;z-index:10"></div>`:"";
+    const camera=state.device==="iPad Air"?`<div style="position:absolute;top:50%;left:${d.bezel/2}px;transform:translateY(-50%);width:5px;height:5px;background:#222;border-radius:50%;border:1px solid #333"></div>`:"";
+    const homeBar=state.device==="iPhone 16"?`<div style="height:4px;width:90px;background:#333;border-radius:2px;margin:7px auto 0"></div>`:"";
+    frameHtml=`<div class="frame-wrap">
+      <div style="width:${d.w+d.bezel*2}px;background:${state.device==="iPhone 16"?"#1a1a1e":"#1c2028"};border-radius:${d.radius+d.bezel}px;padding:${d.bezel}px;box-shadow:0 28px 70px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.06);position:relative">
+        ${notch}${camera}
+        <div class="screen" style="width:${d.w}px;height:${d.h}px;border-radius:${d.radius-3}px">${dashHtml}</div>
+        ${homeBar}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById("app").innerHTML=`
+    <div class="device-bar">
+      <span class="mono" style="font-size:.48rem;color:#2a5570;letter-spacing:.1em;margin-right:3px">VIEW</span>
+      ${devBtns}
+      <span class="mono" style="margin-left:auto;font-size:.45rem;color:#1a3050;letter-spacing:.06em">AUTO-SAVED</span>
+    </div>
+    ${frameHtml}`;
+
+  // restore ticker input cursor
+  const ti=document.getElementById("ticker-input");
+  if(ti){const len=ti.value.length;ti.setSelectionRange(len,len);}
+}
+
+/* ── Init ── */
+(async function init(){
+  // Drop any stale saved panel ID that no longer exists
+  const saved=LS.get("ppmm_panels",PANEL_IDS).filter(id=>PANEL_IDS.includes(id));
+  const missing=PANEL_IDS.filter(id=>!saved.includes(id));
+  state.panels=[...saved,...missing];
+
+  render();
+  scheduleCountdown();
+  await fetchAllData();
+  scheduleRefresh();
+})();
+</script>
+</body>
+</html>
