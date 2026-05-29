@@ -200,8 +200,13 @@ CNBC_SESSION.headers.update({
     "User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                        "AppleWebKit/537.36 (KHTML, like Gecko) "
                        "Chrome/124.0.0.0 Safari/537.36",
+    "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-GB,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
     "Referer":         "https://www.cnbc.com/",
+    "Sec-Fetch-Dest":  "document",
+    "Sec-Fetch-Mode":  "navigate",
+    "Sec-Fetch-Site":  "same-origin",
 })
 
 
@@ -217,7 +222,8 @@ def fetch_cnbc(symbol: str, timeout: int = 12) -> dict | None:
 
     m = _CNBC_LAST_RE.search(r.text)
     if not m:
-        log.warning("CNBC %s: price not found in page", symbol)
+        log.warning("CNBC %s: price not found (status=%s, body_snippet=%s)",
+                    symbol, r.status_code, r.text[:120].replace("\n", " "))
         return None
 
     price = float(m.group(1))
