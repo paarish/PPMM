@@ -229,7 +229,7 @@ function panelIndices(){
     const t=i.thresholds||{low:15,moderate:25,high:35};
     const vl=vv==null?null:vv<t.low?{l:"LOW FEAR",c:"#00d084"}:vv<t.moderate?{l:"MODERATE",c:"#f0a030"}:vv<t.high?{l:"HIGH FEAR",c:"#ff7040"}:{l:"EXTREME",c:"#ff4d4d"};
     const sep=(i.vix&&(idx===0||!INDICES[idx-1].vix))?`<div style="margin:5px -5px 2px;border-top:1px solid #1a2d3e"></div>`:"";
-    return sep+dataRow(i.l,q?.price,i.vix?null:q?.change,i.vix?null:q?.pct,"",i.dec??2,vl?.l,vl?.c);
+    return sep+dataRow(i.l,q?.price,q?.change,q?.pct,"",i.dec??2,vl?.l,vl?.c);
   }).join("");
   return `<div class="sec-header"><span>🌍</span><span class="sec-title">Global Equity Indices</span></div>${rows}`;
 }
