@@ -1,0 +1,8 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PPMM — settings.yaml
+# Operational settings only.  Instrument definitions live in instruments.yaml.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Fetch intervals (seconds)
+schedule:
+  market_data: 300   # 5 minutes between full refresh cycles

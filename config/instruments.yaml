@@ -1,0 +1,152 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PPMM — instruments.yaml
+# Instrument definitions only.  Add / remove securities here.
+# Operational settings (schedule intervals) live in settings.yaml.
+#
+# All market data comes from Google Finance scraping (gf_ticker field).
+# Two bond yields fall back to FRED CSV (source: fred).
+#
+# Google Finance ticker formats
+#   Indices   → TICKER:EXCHANGE    e.g. .INX:INDEXSP
+#   FX pairs  → BASE-QUOTE         e.g. GBP-USD
+#   Futures   → CODEW00:EXCHANGE   e.g. CLW00:NYMEX  (W00 = front-month continuous)
+#   Stocks    → TICKER:EXCHANGE    e.g. AAPL:NASDAQ
+#   Crypto    → BASE-USD           e.g. BTC-USD
+#   Bonds     → CODE:INDEXCBOE     e.g. TNX:INDEXCBOE
+#
+# Optional fields
+#   scale     multiply raw GF price by this (CBOE yield indices store yield × 10)
+#   unit      display label shown on the dashboard
+#   decimals  decimal places for display
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ─── Equity Indices ───────────────────────────────────────────────────────────
+indices:
+  - label: "S&P 500"
+    gf_ticker: ".INX:INDEXSP"
+    decimals: 2
+
+  - label: "NASDAQ"
+    gf_ticker: ".IXIC:INDEXNASDAQ"
+    decimals: 2
+
+  - label: "FTSE 100"
+    gf_ticker: "UKX:INDEXFTSE"
+    decimals: 2
+
+  - label: "DAX"
+    gf_ticker: "DAX:INDEXDB"
+    decimals: 2
+
+  - label: "Nikkei 225"
+    gf_ticker: "NI225:INDEXNIKKEI"
+    decimals: 0
+
+  - label: "Hang Seng"
+    gf_ticker: "HSI:INDEXHANGSENG"
+    decimals: 0
+
+# ─── VIX ─────────────────────────────────────────────────────────────────────
+vix:
+  - label: "VIX"
+    gf_ticker: "VIX:INDEXCBOE"
+    decimals: 2
+    thresholds:
+      low:      15    # below → LOW FEAR  (green)
+      moderate: 25    # below → MODERATE  (amber)
+      high:     35    # below → HIGH FEAR (orange)
+                      # above → EXTREME   (red)
+
+# ─── FX Rates ────────────────────────────────────────────────────────────────
+# Format: BASE-QUOTE  (Google Finance convention)
+fx:
+  - label: "GBP/USD"
+    gf_ticker: "GBP-USD"
+    decimals: 4
+
+  - label: "EUR/USD"
+    gf_ticker: "EUR-USD"
+    decimals: 4
+
+  - label: "USD/JPY"
+    gf_ticker: "USD-JPY"
+    decimals: 2
+
+  - label: "EUR/GBP"
+    gf_ticker: "EUR-GBP"
+    decimals: 4
+
+# ─── Commodities & Energy ─────────────────────────────────────────────────────
+# W00 = nearest-month continuous contract.
+# TTF note: TTFW00:NYMEX is the NYMEX-listed Dutch TTF contract (EUR/MWh).
+#           The daily % change will look extreme on contract-roll day — price is correct.
+commodities:
+  - label: "Brent Crude"
+    gf_ticker: "BZW00:NYMEX"
+    decimals: 2
+    unit: "USD/bbl"
+
+  - label: "WTI Crude"
+    gf_ticker: "CLW00:NYMEX"
+    decimals: 2
+    unit: "USD/bbl"
+
+  - label: "Gold"
+    gf_ticker: "GCW00:COMEX"
+    decimals: 2
+    unit: "USD/oz"
+
+  - label: "TTF Gas"
+    gf_ticker: "TTFW00:NYMEX"
+    decimals: 3
+    unit: "EUR/MWh"
+
+  - label: "Henry Hub"
+    gf_ticker: "NGW00:NYMEX"
+    decimals: 3
+    unit: "USD/MMBtu"
+
+# ─── Cryptocurrency ───────────────────────────────────────────────────────────
+crypto:
+  - label: "Bitcoin"
+    gf_ticker: "BTC-USD"
+    decimals: 0
+    unit: "USD"
+
+# ─── Stocks ──────────────────────────────────────────────────────────────────
+stocks:
+  us:
+    - label: "Apple"
+      gf_ticker: "AAPL:NASDAQ"
+      decimals: 2
+
+  uk:
+    - label: "Barclays"
+      gf_ticker: "BARC:LON"
+      scale: 0.01    # LSE quotes in pence (GBX) — divide by 100 to get GBP
+      decimals: 2
+      unit: "GBP"
+
+# ─── Bond Yields ─────────────────────────────────────────────────────────────
+# CBOE yield indices store value as actual_yield × 10  (TNX=44.55 → 4.455%).
+# scale: 0.1 normalises to the real percentage before storing.
+# US 2Y and UK 10Y have no real-time GF page; they use FRED CSV.
+bonds:
+  - label: "US 2Y"
+    source: fred
+    series_id: "DGS2"
+    decimals: 3
+    unit: "%"
+
+  - label: "US 10Y"
+    gf_ticker: "TNX:INDEXCBOE"
+    scale: 0.1
+    decimals: 3
+    unit: "%"
+
+  - label: "UK 10Y"
+    source: fred
+    series_id: "IRLTLT01GBM156N"
+    decimals: 3
+    unit: "%"
+    # Monthly FRED series — value updates once per month.

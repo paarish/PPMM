@@ -1,0 +1,6 @@
+{
+  "CONSENT": "YES+GB.en+V14+BX",
+  "SOCS": "CAESEwgDEgk0ODM3NjgxMzAaAmVuIAEaBgiA_LCrBg",
+  "last_refreshed": "2026-05-28T18:00:00Z",
+  "_note": "Run tools/refresh_gf_cookies.py when scraping silently returns no data"
+}

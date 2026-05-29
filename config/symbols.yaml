@@ -1,0 +1,6 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PPMM — symbols.yaml  (kept for backward compatibility)
+# Configuration has been split:
+#   config/instruments.yaml  — all instrument definitions (edit this to add symbols)
+#   config/settings.yaml     — schedule intervals and operational settings
+# ─────────────────────────────────────────────────────────────────────────────

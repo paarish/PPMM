@@ -1,0 +1,18 @@
+services:
+  ppmm:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    container_name: ppmm
+    restart: unless-stopped
+    ports:
+      - "8000:5000"
+    volumes:
+      - ../data:/app/data        # market_data.json — persists across restarts
+      - ../config:/app/config    # edit instruments.yaml without rebuild
+      - ../static:/app/static    # update frontend without rebuild
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
