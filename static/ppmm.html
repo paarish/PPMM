@@ -74,6 +74,7 @@ let FX=[];
 let COMM=[];
 let CRYPTO=[];
 let BONDS=[];
+let STOCKS_META={};
 
 async function fetchConfig(){
   try{
@@ -84,15 +85,28 @@ async function fetchConfig(){
       ...(cfg.indices||[]).map(e=>({l:e.label,dec:e.decimals??2,vix:false})),
       ...(cfg.vix||[]).map(e=>({l:e.label,dec:e.decimals??2,vix:true,thresholds:e.thresholds})),
     ];
-    FX=(cfg.fx||[]).map(e=>({l:e.label,dec:e.decimals??4}));
-    COMM=(cfg.commodities||[]).map(e=>({l:e.label,dec:e.decimals??2,unit:e.unit?` ${e.unit}`:""}));
+    FX=(cfg.fx||[]).map(e=>{
+      const quoteCcy=(e.label.split("/")[1]||"").trim();
+      return {l:e.label,dec:e.decimals??4,sym:csym(quoteCcy)};
+    });
+    COMM=(cfg.commodities||[]).map(e=>{
+      const parts=(e.unit||"").split("/");
+      const ccy=parts[0];
+      const rest=parts.length>1?"/"+parts.slice(1).join("/"):"";
+      return {l:e.label,dec:e.decimals??2,unit:rest,sym:csym(ccy)};
+    });
     CRYPTO=(cfg.crypto||[]).map(e=>({l:e.label,dec:e.decimals??0}));
     BONDS=(cfg.bonds||[]).map(e=>({l:e.label,dec:e.decimals??3,src:e.source==="cnbc"?"CNBC":e.source==="fred"?"FRED":"GF"}));
+    STOCKS_META={};
+    for(const e of [...(cfg.stocks?.us||[]),...(cfg.stocks?.uk||[])])
+      STOCKS_META[e.label]={sym:csym(e.currency||"")};
   }catch(e){console.error("fetchConfig:",e);}
 }
 
 const fmt=(n,d=2)=>{if(n==null||isNaN(n))return"—";return Number(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});};
 const chipArrow=v=>v>=0?"▲":"▼";
+const CSYM={USD:"$",GBP:"£",EUR:"€",INR:"₹",JPY:"¥"};
+const csym=c=>CSYM[c]||"";
 
 /* ── State ── */
 let state={
@@ -179,7 +193,7 @@ function scheduleCountdown(){
 
 
 /* ── Row builder ── */
-function dataRow(label,value,change,pct,unit="",dec=2,badge,badgeColor){
+function dataRow(label,value,change,pct,unit="",dec=2,badge,badgeColor,sym=""){
   const chipHtml=(change!=null||pct!=null)?`<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:1px">
     ${change!=null?`<span class="mono ${change>=0?"up":"dn"}" style="font-size:.7rem">${chipArrow(change)} ${Math.abs(change).toFixed(2)}</span>`:""}
     ${pct!=null?`<span class="mono ${pct>=0?"up":"dn"}" style="font-size:.7rem">${chipArrow(pct)} ${Math.abs(pct).toFixed(2)}%</span>`:""}
@@ -188,7 +202,7 @@ function dataRow(label,value,change,pct,unit="",dec=2,badge,badgeColor){
   return `<div class="row">
     <div style="display:flex;align-items:center;gap:4px"><span class="mono" style="font-size:.73rem;color:#8ba8c4">${label}</span>${badgeHtml}</div>
     <div style="text-align:right">
-      <div class="mono" style="font-size:.84rem;color:#e8eef4">${value!=null?fmt(value,dec)+unit:'<span class="dim">—</span>'}</div>
+      <div class="mono" style="font-size:.84rem;color:#e8eef4">${value!=null?sym+fmt(value,dec)+unit:'<span class="dim">—</span>'}</div>
       ${chipHtml}
     </div>
   </div>`;
@@ -196,33 +210,63 @@ function dataRow(label,value,change,pct,unit="",dec=2,badge,badgeColor){
 
 /* ── Panel content builders ── */
 function panelIndices(){
-  const rows=INDICES.map(i=>{
+  const rows=INDICES.map((i,idx)=>{
     const q=state.data.indices[i.l];
     const vv=i.vix?q?.price:null;
     const t=i.thresholds||{low:15,moderate:25,high:35};
     const vl=vv==null?null:vv<t.low?{l:"LOW FEAR",c:"#00d084"}:vv<t.moderate?{l:"MODERATE",c:"#f0a030"}:vv<t.high?{l:"HIGH FEAR",c:"#ff7040"}:{l:"EXTREME",c:"#ff4d4d"};
-    return dataRow(i.l,q?.price,i.vix?null:q?.change,i.vix?null:q?.pct,"",i.dec??2,vl?.l,vl?.c);
+    const sep=(i.vix&&(idx===0||!INDICES[idx-1].vix))?`<div style="margin:5px -5px 2px;border-top:1px solid #1a2d3e"></div>`:"";
+    return sep+dataRow(i.l,q?.price,i.vix?null:q?.change,i.vix?null:q?.pct,"",i.dec??2,vl?.l,vl?.c);
   }).join("");
   return `<div class="sec-header"><span>🌍</span><span class="sec-title">Global Equity Indices</span></div>${rows}`;
 }
 function panelFxCrypto(){
-  const fxRows=FX.map(p=>{const q=state.data.fx[p.l];return dataRow(p.l,q?.price,q?.change,q?.pct,"",p.dec);}).join("");
+  const fxRows=FX.map(p=>{const q=state.data.fx[p.l];return dataRow(p.l,q?.price,q?.change,q?.pct,"",p.dec,undefined,undefined,p.sym);}).join("");
   const crRows=CRYPTO.map(c=>{const q=state.data.crypto[c.l];return dataRow(c.l,q?.price,q?.change,q?.pct,c.unit||" USD",c.dec??0);}).join("");
   return `<div class="sec-header"><span>💱</span><span class="sec-title">FX Rates</span></div>${fxRows}
   <div style="margin-top:11px"><div class="sec-header"><span>₿</span><span class="sec-title">Cryptocurrency</span></div>${crRows}</div>`;
 }
 function panelBondsOil(){
-  const bonds=BONDS.map(b=>{
-    const q=state.data.bonds[b.l];
-    const pct=b.src==="GF"?q?.pct:null;
-    return dataRow(b.l,q?.price,null,pct,"%",b.dec,b.src,"#3a6a8a");
-  }).join("");
-  const commRows=COMM.map(c=>{const q=state.data.comm[c.l];return dataRow(c.l,q?.price,q?.change,q?.pct,c.unit,c.dec);}).join("");
-  return `<div class="sec-header"><span>🏛️</span><span class="sec-title">Government Bond Yields</span></div>${bonds}
+  const countries=["US","UK"];
+  const tenors=["2Y","5Y","10Y","30Y"];
+  const bondMap={};
+  for(const b of BONDS)bondMap[b.l]={q:state.data.bonds[b.l],dec:b.dec??3};
+
+  // Header row: empty tenor column + country headers
+  let cells=`<div></div>`;
+  for(const c of countries)cells+=`<div style="text-align:center;padding:2px 0 7px 0"><span style="font-family:'Bebas Neue',sans-serif;font-size:.8rem;letter-spacing:.14em;color:#5ab0e0">${c}</span></div>`;
+
+  // One row per tenor
+  for(let ti=0;ti<tenors.length;ti++){
+    const tenor=tenors[ti];
+    const sep="border-top:1px solid #0a1318;";
+    cells+=`<div style="display:flex;align-items:center;padding:6px 6px 6px 2px;${sep}"><span class="mono" style="font-size:.72rem;color:#8ba8c4">${tenor}</span></div>`;
+    for(const country of countries){
+      const entry=bondMap[`${country} ${tenor}`];
+      if(!entry){
+        cells+=`<div style="text-align:center;padding:6px 4px;${sep}"><span class="mono dim" style="font-size:.72rem">—</span></div>`;
+      }else{
+        const{q,dec}=entry;
+        const price=q?.price,change=q?.change;
+        const cc=change==null?"#334":change>=0?"#00d084":"#ff4d4d";
+        const chgHtml=change!=null
+          ?`<div class="mono" style="font-size:.63rem;color:${cc};margin-top:1px">${change>=0?"▲":"▼"} ${Math.abs(change).toFixed(dec)}</div>`
+          :`<div style="height:13px"></div>`;
+        cells+=`<div style="text-align:center;padding:6px 4px;${sep}">
+          <div class="mono" style="font-size:.82rem;color:#e8eef4">${price!=null?fmt(price,dec)+"%":'<span class="dim">—</span>'}</div>
+          ${chgHtml}
+        </div>`;
+      }
+    }
+  }
+
+  const bondsGrid=`<div style="display:grid;grid-template-columns:28px 1fr 1fr;gap:0">${cells}</div>`;
+  const commRows=COMM.map(c=>{const q=state.data.comm[c.l];return dataRow(c.l,q?.price,q?.change,q?.pct,c.unit,c.dec,undefined,undefined,c.sym);}).join("");
+  return `<div class="sec-header"><span>🏛️</span><span class="sec-title">Government Bond Yields</span></div>${bondsGrid}
   <div style="margin-top:11px"><div class="sec-header"><span>⚡</span><span class="sec-title">Energy &amp; Commodities</span></div>${commRows}</div>`;
 }
 function panelStocks(){
-  const rows=state.tickers.map(t=>{const q=state.data.stocks[t];return dataRow(t,q?.price,q?.change,q?.pct,"",2);}).join("");
+  const rows=state.tickers.map(t=>{const q=state.data.stocks[t];const sm=(STOCKS_META[t]||{}).sym||"";return dataRow(t,q?.price,q?.change,q?.pct,"",2,undefined,undefined,sm);}).join("");
   const chips=state.tickers.map(t=>`<div style="display:flex;align-items:center;gap:3px;background:#0d2035;border:1px solid #1a3550;border-radius:3px;padding:2px 6px">
     <span class="mono" style="font-size:.68rem;color:#8ba8c4">${t}</span>
     <button onclick="removeTicker('${t}')" style="background:none;border:none;color:#ff4d4d;font-size:.68rem;padding:0;line-height:1">✕</button>
@@ -366,7 +410,7 @@ function render(){
     <div class="screen-inner">
       <div style="${gridStyle}">${panelsHtml}</div>
     </div>
-    <div class="footer">GOOGLE FINANCE · FRED · INFORMATIONAL USE ONLY</div>`;
+    <div class="footer">GOOGLE FINANCE · CNBC · INFORMATIONAL USE ONLY</div>`;
 
   // device frame
   let frameHtml;
