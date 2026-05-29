@@ -34,8 +34,16 @@ indices:
     gf_ticker: "UKX:INDEXFTSE"
     decimals: 2
 
+  - label: "EURO STOXX 50"
+    gf_ticker: "SX5E:INDEXSTOXX"
+    decimals: 2
+
   - label: "Nikkei 225"
     gf_ticker: "NI225:INDEXNIKKEI"
+    decimals: 0
+
+  - label: "Sensex"
+    gf_ticker: "SENSEX:INDEXBOM"
     decimals: 0
 
 # ─── VIX ─────────────────────────────────────────────────────────────────────
