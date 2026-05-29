@@ -34,16 +34,8 @@ indices:
     gf_ticker: "UKX:INDEXFTSE"
     decimals: 2
 
-  - label: "DAX"
-    gf_ticker: "DAX:INDEXDB"
-    decimals: 2
-
   - label: "Nikkei 225"
     gf_ticker: "NI225:INDEXNIKKEI"
-    decimals: 0
-
-  - label: "Hang Seng"
-    gf_ticker: "HSI:INDEXHANGSENG"
     decimals: 0
 
 # ─── VIX ─────────────────────────────────────────────────────────────────────
