@@ -120,6 +120,18 @@ stocks:
       gf_ticker: "AAPL:NASDAQ"
       decimals: 2
 
+    - label: "Google"
+      gf_ticker: "GOOGL:NASDAQ"
+      decimals: 2
+
+    - label: "Microsoft"
+      gf_ticker: "MSFT:NASDAQ"
+      decimals: 2
+
+    - label: "Tesla"
+      gf_ticker: "TSLA:NASDAQ"
+      decimals: 2
+
   uk:
     - label: "Barclays"
       gf_ticker: "BARC:LON"
