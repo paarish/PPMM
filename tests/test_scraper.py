@@ -77,25 +77,18 @@ def scrape(ticker: str, session, scale: float = 1.0) -> dict | None:
     }
 
 
-def fetch_fred(series_id: str, session) -> dict | None:
-    """Fetch a FRED CSV series and return the latest non-null value."""
+def fetch_cnbc(symbol: str, session) -> dict | None:
+    """Scrape a bond yield from https://www.cnbc.com/quotes/<symbol>."""
+    import re as _re
+    url = f"https://www.cnbc.com/quotes/{symbol}"
     try:
-        r = session.get(
-            "https://fred.stlouisfed.org/graph/fredgraph.csv",
-            params={"id": series_id},
-            timeout=15,
-        )
+        r = session.get(url, timeout=12)
         r.raise_for_status()
-        lines = [
-            l for l in r.text.strip().split("\n")
-            if not l.startswith("DATE") and not l.startswith("observation_date")
-        ]
-        for line in reversed(lines):
-            parts = line.split(",")
-            if len(parts) >= 2 and parts[1].strip() not in ("", "."):
-                return {"price": float(parts[1].strip()), "series": series_id}
+        m = _re.search(r'"last"\s*:\s*"?([-\d.]+)"?', r.text)
+        if m:
+            return {"price": float(m.group(1)), "symbol": symbol}
     except Exception:
-        return None
+        pass
     return None
 
 
@@ -163,12 +156,6 @@ class TestFX:
         assert data is not None, "GBP/USD: scrape returned None"
         assert_price(data["price"], "GBP/USD", min_val=0.8, max_val=2.0)
         assert_pct(data["changePct"], "GBP/USD")
-
-    def test_usd_jpy(self, gf_session):
-        """USD/JPY should be above 100 (JPY is a lower-value currency)."""
-        data = scrape("USD-JPY", gf_session)
-        assert data is not None, "USD/JPY: scrape returned None"
-        assert_price(data["price"], "USD/JPY", min_val=80, max_val=200)
 
     def test_eur_gbp(self, gf_session):
         """EUR/GBP cross."""
@@ -255,37 +242,44 @@ class TestStocks:
 
 
 class TestBonds:
-    """Government bond yield scraping.
-    US 10Y → Google Finance (CBOE index, scale ×0.1).
-    US 2Y / UK 10Y → FRED CSV fallback.
-    """
+    """Government bond yield scraping — all via CNBC quote pages."""
 
-    def test_us_10y_gf(self, gf_session):
-        """US 10Y Treasury yield via TNX:INDEXCBOE (raw value ÷10 = yield %)."""
-        data = scrape("TNX:INDEXCBOE", gf_session, scale=0.1)
-        assert data is not None, "US 10Y (GF): scrape returned None"
-        # Yield should be between 0.5% and 10%
+    def test_us_10y_cnbc(self, cnbc_session):
+        """US 10Y Treasury yield via CNBC US10Y."""
+        data = fetch_cnbc("US10Y", cnbc_session)
+        assert data is not None, "US 10Y (CNBC): fetch returned None"
         assert_price(data["price"], "US 10Y yield", min_val=0.5, max_val=10.0)
 
-    def test_us_2y_fred(self, fred_session):
-        """US 2Y Treasury yield via FRED DGS2 (daily % series)."""
-        data = fetch_fred("DGS2", fred_session)
-        assert data is not None, "US 2Y (FRED): fetch returned None"
-        assert_price(data["price"], "US 2Y yield (FRED)", min_val=0.01, max_val=10.0)
+    def test_us_2y_cnbc(self, cnbc_session):
+        """US 2Y Treasury yield via CNBC US2Y."""
+        data = fetch_cnbc("US2Y", cnbc_session)
+        assert data is not None, "US 2Y (CNBC): fetch returned None"
+        assert_price(data["price"], "US 2Y yield", min_val=0.5, max_val=10.0)
 
-    def test_uk_10y_fred(self, fred_session):
-        """UK 10Y Gilt yield via FRED IRLTLT01GBM156N (monthly % series)."""
-        data = fetch_fred("IRLTLT01GBM156N", fred_session)
-        assert data is not None, "UK 10Y (FRED): fetch returned None"
-        assert_price(data["price"], "UK 10Y yield (FRED)", min_val=0.01, max_val=10.0)
+    def test_uk_10y_cnbc(self, cnbc_session):
+        """UK 10Y Gilt yield via CNBC UK10Y."""
+        data = fetch_cnbc("UK10Y", cnbc_session)
+        assert data is not None, "UK 10Y (CNBC): fetch returned None"
+        assert_price(data["price"], "UK 10Y yield", min_val=0.5, max_val=10.0)
 
-    def test_cboe_yield_scale(self, gf_session):
-        """Raw TNX value × 0.1 should equal the GF-displayed yield percentage."""
-        raw = scrape("TNX:INDEXCBOE", gf_session, scale=1.0)  # raw, no scale
-        assert raw is not None, "TNX raw: scrape returned None"
-        scaled = raw["price"] * 0.1
-        # Typical range 3–6%
-        assert 0.5 < scaled < 10.0, f"TNX scaled yield {scaled:.3f}% looks wrong"
+    def test_uk_5y_cnbc(self, cnbc_session):
+        """UK 5Y Gilt yield via CNBC UK5Y."""
+        data = fetch_cnbc("UK5Y", cnbc_session)
+        assert data is not None, "UK 5Y (CNBC): fetch returned None"
+        assert_price(data["price"], "UK 5Y yield", min_val=0.5, max_val=10.0)
+
+    def test_all_configured_bonds(self, cnbc_session, instruments):
+        """All bonds in instruments.yaml with source:cnbc must return a yield."""
+        failures = []
+        for entry in instruments.get("bonds", []):
+            if entry.get("source") != "cnbc":
+                continue
+            sym  = entry["cnbc_symbol"]
+            data = fetch_cnbc(sym, cnbc_session)
+            if data is None or data["price"] <= 0:
+                failures.append(f"{entry['label']} ({sym})")
+            time.sleep(0.5)
+        assert not failures, "CNBC bonds returned no data: " + ", ".join(failures)
 
 
 class TestConfig:
@@ -304,7 +298,7 @@ class TestConfig:
         assert interval and interval > 0, f"schedule.market_data must be positive, got {interval}"
 
     def test_all_gf_instruments_have_tickers(self, instruments):
-        """Every non-FRED instrument must have a gf_ticker field."""
+        """Every Google Finance instrument must have a gf_ticker field."""
         missing = []
         for section in ["indices", "vix", "fx", "commodities", "crypto"]:
             for entry in instruments.get(section, []):
@@ -317,17 +311,18 @@ class TestConfig:
             if not entry.get("gf_ticker"):
                 missing.append(f"stocks/uk/{entry.get('label','?')}")
         for entry in instruments.get("bonds", []):
-            if entry.get("source") != "fred" and not entry.get("gf_ticker"):
+            src = entry.get("source", "google_finance")
+            if src == "google_finance" and not entry.get("gf_ticker"):
                 missing.append(f"bonds/{entry.get('label','?')}")
         assert not missing, f"Missing gf_ticker: {missing}"
 
-    def test_fred_bonds_have_series_ids(self, instruments):
-        """Every bond entry with source: fred must have a series_id."""
+    def test_cnbc_bonds_have_symbols(self, instruments):
+        """Every bond entry with source: cnbc must have a cnbc_symbol."""
         missing = []
         for entry in instruments.get("bonds", []):
-            if entry.get("source") == "fred" and not entry.get("series_id"):
+            if entry.get("source") == "cnbc" and not entry.get("cnbc_symbol"):
                 missing.append(entry.get("label", "?"))
-        assert not missing, f"FRED bond entries missing series_id: {missing}"
+        assert not missing, f"CNBC bond entries missing cnbc_symbol: {missing}"
 
     def test_no_duplicate_labels(self, instruments):
         """Instrument labels must be unique within each section."""

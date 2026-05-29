@@ -66,11 +66,17 @@ def gf_session():
     return s
 
 
-# ── FRED session fixture ───────────────────────────────────────────────────────
+# ── CNBC session fixture ───────────────────────────────────────────────────────
 @pytest.fixture(scope="session")
-def fred_session():
+def cnbc_session():
     s = requests.Session()
-    s.headers["User-Agent"] = "PPMM-Test/2.0"
+    s.headers.update({
+        "User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                           "AppleWebKit/537.36 (KHTML, like Gecko) "
+                           "Chrome/124.0.0.0 Safari/537.36",
+        "Accept-Language": "en-GB,en;q=0.9",
+        "Referer":         "https://www.cnbc.com/",
+    })
     return s
 
 

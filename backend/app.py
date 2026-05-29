@@ -189,40 +189,48 @@ def fetch_gf_entry(entry: dict) -> dict | None:
     return data
 
 
-# ── FRED fallback ─────────────────────────────────────────────────────────────
+# ── CNBC bond yield scraper ───────────────────────────────────────────────────
 
-FRED_SESSION = requests.Session()
-FRED_SESSION.headers["User-Agent"] = "PPMM-Backend/2.0"
+_CNBC_LAST_RE   = re.compile(r'"last"\s*:\s*"?([-\d.]+)"?')
+_CNBC_CHG_RE    = re.compile(r'"change"\s*:\s*"?([-\d.]+)"?')
+_CNBC_CHGPCT_RE = re.compile(r'"change_pct"\s*:\s*"?([-\d.]+)"?')
+
+CNBC_SESSION = requests.Session()
+CNBC_SESSION.headers.update({
+    "User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/124.0.0.0 Safari/537.36",
+    "Accept-Language": "en-GB,en;q=0.9",
+    "Referer":         "https://www.cnbc.com/",
+})
 
 
-def fetch_fred(series_id: str, timeout: int = 15) -> dict | None:
+def fetch_cnbc(symbol: str, timeout: int = 12) -> dict | None:
+    """Scrape a bond yield from https://www.cnbc.com/quotes/<symbol>."""
+    url = f"https://www.cnbc.com/quotes/{symbol}"
     try:
-        r = FRED_SESSION.get(
-            "https://fred.stlouisfed.org/graph/fredgraph.csv",
-            params={"id": series_id},
-            timeout=timeout,
-        )
+        r = CNBC_SESSION.get(url, timeout=timeout)
         r.raise_for_status()
-        lines = [
-            l for l in r.text.strip().split("\n")
-            if not l.startswith("DATE") and not l.startswith("observation_date")
-        ]
-        for line in reversed(lines):
-            parts = line.split(",")
-            if len(parts) >= 2 and parts[1].strip() not in ("", "."):
-                try:
-                    return {
-                        "price":     float(parts[1].strip()),
-                        "change":    None,
-                        "changePct": None,
-                        "symbol_used": series_id,
-                        "source":    "fred",
-                    }
-                except ValueError:
-                    continue
     except Exception as e:
-        log.warning("FRED %s: %s", series_id, e)
-    return None
+        log.warning("CNBC %s: %s", symbol, e)
+        return None
+
+    m = _CNBC_LAST_RE.search(r.text)
+    if not m:
+        log.warning("CNBC %s: price not found in page", symbol)
+        return None
+
+    price = float(m.group(1))
+    chg_m = _CNBC_CHG_RE.search(r.text)
+    pct_m = _CNBC_CHGPCT_RE.search(r.text)
+
+    return {
+        "price":       price,
+        "change":      float(chg_m.group(1)) if chg_m else None,
+        "changePct":   float(pct_m.group(1)) if pct_m else None,
+        "symbol_used": symbol,
+        "source":      "cnbc",
+    }
 
 
 # ── Fetch cycle ───────────────────────────────────────────────────────────────
@@ -284,7 +292,10 @@ def fetch_market_data():
     for entry in cfg.get("bonds", []):
         label  = entry["label"]
         source = entry.get("source", "google_finance")
-        data   = fetch_fred(entry["series_id"]) if source == "fred" else fetch_gf_entry(entry)
+        if source == "cnbc":
+            data = fetch_cnbc(entry["cnbc_symbol"])
+        else:
+            data = fetch_gf_entry(entry)
         if data:
             payload["bonds"][label] = data
         else:

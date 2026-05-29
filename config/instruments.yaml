@@ -136,25 +136,47 @@ stocks:
       unit: "GBP"
 
 # ─── Bond Yields ─────────────────────────────────────────────────────────────
-# CBOE yield indices store value as actual_yield × 10  (TNX=44.55 → 4.455%).
-# scale: 0.1 normalises to the real percentage before storing.
-# US 2Y and UK 10Y have no real-time GF page; they use FRED CSV.
+# All yields scraped from CNBC quote pages (https://www.cnbc.com/quotes/<symbol>).
+# source: cnbc  →  cnbc_symbol is the CNBC quote identifier.
 bonds:
   - label: "US 2Y"
-    source: fred
-    series_id: "DGS2"
+    source: cnbc
+    cnbc_symbol: "US2Y"
+    decimals: 3
+    unit: "%"
+
+  - label: "US 5Y"
+    source: cnbc
+    cnbc_symbol: "US5Y"
     decimals: 3
     unit: "%"
 
   - label: "US 10Y"
-    gf_ticker: "TNX:INDEXCBOE"
-    scale: 0.1
+    source: cnbc
+    cnbc_symbol: "US10Y"
+    decimals: 3
+    unit: "%"
+
+  - label: "US 30Y"
+    source: cnbc
+    cnbc_symbol: "US30Y"
+    decimals: 3
+    unit: "%"
+
+  - label: "UK 2Y"
+    source: cnbc
+    cnbc_symbol: "UK2Y"
+    decimals: 3
+    unit: "%"
+
+  - label: "UK 5Y"
+    source: cnbc
+    cnbc_symbol: "UK5Y"
     decimals: 3
     unit: "%"
 
   - label: "UK 10Y"
-    source: fred
-    series_id: "IRLTLT01GBM156N"
+    source: cnbc
+    cnbc_symbol: "UK10Y"
     decimals: 3
     unit: "%"
-    # Monthly FRED series — value updates once per month.

@@ -87,7 +87,7 @@ async function fetchConfig(){
     FX=(cfg.fx||[]).map(e=>({l:e.label,dec:e.decimals??4}));
     COMM=(cfg.commodities||[]).map(e=>({l:e.label,dec:e.decimals??2,unit:e.unit?` ${e.unit}`:""}));
     CRYPTO=(cfg.crypto||[]).map(e=>({l:e.label,dec:e.decimals??0}));
-    BONDS=(cfg.bonds||[]).map(e=>({l:e.label,dec:e.decimals??3,src:e.source==="fred"?"FRED":"GF"}));
+    BONDS=(cfg.bonds||[]).map(e=>({l:e.label,dec:e.decimals??3,src:e.source==="cnbc"?"CNBC":e.source==="fred"?"FRED":"GF"}));
   }catch(e){console.error("fetchConfig:",e);}
 }
 
