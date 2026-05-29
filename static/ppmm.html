@@ -66,7 +66,7 @@ const DEVICES={
   "iPhone 16":{icon:"📱",w:393,h:852, cols:1,radius:50,bezel:10,hfs:"1.05rem"},
   "Mac":      {icon:"💻",w:null,h:null,cols:0,radius:0, bezel:0, hfs:"1.5rem"}
 };
-const PANEL_IDS=["indices","fx-crypto","bonds-oil","stocks"];
+const PANEL_IDS=["indices","fx-crypto","bonds-oil","stocks","news"];
 
 // Populated from /api/config at startup — no hardcoded instrument lists
 let INDICES=[];
@@ -116,11 +116,11 @@ let state={
   refresh:LS.get("ppmm_refresh",5),
   data:{indices:{},fx:{},comm:{},crypto:{},bonds:{},stocks:{}},
   loading:false,serverConnecting:false,lastUp:null,countdown:0,stale:false,cookiesValid:true,
-  savedFlash:false,
+  news:null,savedFlash:false,
   drag:{from:null,over:null},
   tickerInput:""
 };
-let refreshTimer=null,countdownTimer=null,savedTimer=null;
+let refreshTimer=null,countdownTimer=null,savedTimer=null,newsTimer=null;
 
 function setState(patch){Object.assign(state,patch);render();}
 
@@ -177,6 +177,19 @@ async function fetchAllData(){
   }
 }
 
+
+async function fetchNews(){
+  try{
+    const r=await fetch("/api/news");
+    if(!r.ok)return;
+    const n=await r.json();
+    if(n.regions)setState({news:n});
+  }catch(e){console.error("fetchNews:",e);}
+}
+function scheduleNewsRefresh(){
+  if(newsTimer)clearInterval(newsTimer);
+  newsTimer=setInterval(fetchNews,30*60*1000);
+}
 
 function scheduleRefresh(){
   if(refreshTimer)clearInterval(refreshTimer);
@@ -284,11 +297,48 @@ function panelStocks(){
   </div>`;
 }
 
+function panelNews(){
+  const REGION_META=[
+    {key:"Asia",   icon:"🌏"},
+    {key:"Europe", icon:"🌍"},
+    {key:"US",     icon:"🗽"},
+  ];
+  const regions=state.news?.regions;
+
+  const sections=REGION_META.map(({key,icon},ri)=>{
+    const items=regions?regions[key]||[]:[];
+    const sep=ri>0?`<div style="margin:9px -5px 7px;border-top:1px solid #0f1e2a"></div>`:"";
+    const header=`<div style="display:flex;align-items:center;gap:5px;margin-bottom:5px">
+      <span style="font-size:.8rem">${icon}</span>
+      <span style="font-family:'Bebas Neue',sans-serif;font-size:.75rem;letter-spacing:.13em;color:#5ab0e0">${key}</span>
+    </div>`;
+    const rows=!regions
+      ?`<div class="mono" style="font-size:.66rem;color:#334;padding:3px 2px">Loading…</div>`
+      :items.length===0
+        ?`<div class="mono" style="font-size:.66rem;color:#334;padding:3px 2px">No data</div>`
+        :items.map(item=>{
+          const t=item.pub?new Date(item.pub):null;
+          const ts=t&&!isNaN(t)?t.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
+          return `<div style="padding:5px 0;border-bottom:1px solid #080f17">
+            <div class="mono" style="font-size:.67rem;color:#c0d4e8;line-height:1.4">${item.title}</div>
+            <div style="display:flex;justify-content:space-between;margin-top:2px">
+              <span class="mono" style="font-size:.54rem;color:#3a6070">${item.source||""}</span>
+              <span class="mono" style="font-size:.54rem;color:#243a50">${ts}</span>
+            </div>
+          </div>`;
+        }).join("");
+    return sep+header+rows;
+  }).join("");
+
+  return `<div class="sec-header"><span>📰</span><span class="sec-title">Market News</span></div>${sections}`;
+}
+
 const panelBuilders={
   "indices":panelIndices,
   "fx-crypto":panelFxCrypto,
   "bonds-oil":panelBondsOil,
   "stocks":panelStocks,
+  "news":panelNews,
 };
 
 /* ── Drag ── */
@@ -454,6 +504,8 @@ function render(){
   scheduleCountdown();
   await fetchAllData();
   scheduleRefresh();
+  fetchNews();
+  scheduleNewsRefresh();
 })();
 </script>
 </body>

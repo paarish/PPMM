@@ -15,6 +15,7 @@ import logging
 import os
 import re
 import time
+import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
 import requests
@@ -239,6 +240,55 @@ def fetch_cnbc(symbol: str, timeout: int = 12) -> dict | None:
     }
 
 
+# ── Google News RSS ───────────────────────────────────────────────────────────
+
+_GN_URLS = {
+    "Asia":   "https://news.google.com/rss/search?q=Asian+stock+markets+Nikkei&hl=en-GB&gl=GB&ceid=GB:en",
+    "Europe": "https://news.google.com/rss/search?q=European+stock+markets+FTSE+DAX&hl=en-GB&gl=GB&ceid=GB:en",
+    "US":     "https://news.google.com/rss/search?q=US+stock+market+Wall+Street&hl=en-US&gl=US&ceid=US:en",
+}
+
+GN_SESSION = requests.Session()
+GN_SESSION.headers.update({
+    "User-Agent":  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                   "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept":      "application/rss+xml,application/xml,text/xml,*/*",
+    "Accept-Language": "en-GB,en;q=0.9",
+})
+
+_news_cache: dict = {"timestamp": None, "regions": {}}
+
+
+def fetch_news():
+    """Fetch market news headlines from Google News RSS for each region."""
+    global _news_cache
+    regions: dict = {}
+    for region, url in _GN_URLS.items():
+        items: list = []
+        try:
+            r = GN_SESSION.get(url, timeout=12)
+            r.raise_for_status()
+            root = ET.fromstring(r.content)
+            for el in root.findall(".//item")[:5]:
+                title = el.findtext("title") or ""
+                pub   = el.findtext("pubDate") or ""
+                src   = el.find("source")
+                source = src.text.strip() if src is not None and src.text else ""
+                if not source and " - " in title:
+                    title, source = title.rsplit(" - ", 1)
+                    title, source = title.strip(), source.strip()
+                items.append({"title": title, "source": source, "pub": pub})
+        except Exception as e:
+            log.warning("News %s: %s", region, e)
+        regions[region] = items
+        time.sleep(0.3)
+    _news_cache = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "regions":   regions,
+    }
+    log.info("News fetched: %s", {k: len(v) for k, v in regions.items()})
+
+
 # ── Fetch cycle ───────────────────────────────────────────────────────────────
 
 def fetch_market_data():
@@ -383,6 +433,13 @@ def api_config():
     return jsonify({k: v for k, v in cfg.items() if k != "api"})
 
 
+@app.route("/api/news")
+def api_news():
+    if not _news_cache["timestamp"]:
+        return jsonify({"status": "loading", "regions": {}}), 202
+    return jsonify(_news_cache)
+
+
 # ── Scheduler ─────────────────────────────────────────────────────────────────
 
 def start_scheduler():
@@ -394,8 +451,12 @@ def start_scheduler():
         fetch_market_data, "interval", seconds=interval,
         id="market_data", next_run_time=datetime.now(),
     )
+    scheduler.add_job(
+        fetch_news, "interval", seconds=1800,
+        id="news", next_run_time=datetime.now(),
+    )
     scheduler.start()
-    log.info("Scheduler started — fetching every %ds", interval)
+    log.info("Scheduler started — market every %ds, news every 1800s", interval)
     return scheduler
 
 

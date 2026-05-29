@@ -109,6 +109,11 @@ crypto:
     decimals: 0
     unit: "USD"
 
+  - label: "Ethereum"
+    gf_ticker: "ETH-USD"
+    decimals: 2
+    unit: "USD"
+
 # ─── Stocks ──────────────────────────────────────────────────────────────────
 stocks:
   us:
