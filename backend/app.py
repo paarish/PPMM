@@ -265,10 +265,16 @@ def fetch_news():
     regions: dict = {}
     for region, url in _GN_URLS.items():
         items: list = []
+        r = None
         try:
             r = GN_SESSION.get(url, timeout=12)
+            log.info("News %s: HTTP %d  ct=%s  len=%d",
+                     region, r.status_code,
+                     r.headers.get("content-type", "?")[:50], len(r.content))
             r.raise_for_status()
-            root = ET.fromstring(r.content)
+            # Strip BOM if present
+            content = r.content.lstrip(b"\xef\xbb\xbf")
+            root = ET.fromstring(content)
             for el in root.findall(".//item")[:5]:
                 title = el.findtext("title") or ""
                 pub   = el.findtext("pubDate") or ""
@@ -277,7 +283,12 @@ def fetch_news():
                 if not source and " - " in title:
                     title, source = title.rsplit(" - ", 1)
                     title, source = title.strip(), source.strip()
-                items.append({"title": title, "source": source, "pub": pub})
+                if title:
+                    items.append({"title": title, "source": source, "pub": pub})
+            log.info("News %s: %d items parsed", region, len(items))
+        except ET.ParseError as e:
+            snippet = r.text[:200].replace("\n", " ") if r is not None else "?"
+            log.warning("News %s: XML parse error %s — response: %s", region, e, snippet)
         except Exception as e:
             log.warning("News %s: %s", region, e)
         regions[region] = items

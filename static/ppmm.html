@@ -181,9 +181,11 @@ async function fetchAllData(){
 async function fetchNews(){
   try{
     const r=await fetch("/api/news");
+    if(r.status===404){setState({news:{_rebuild:true}});return;}
     if(!r.ok)return;
     const n=await r.json();
     if(n.regions)setState({news:n});
+    if(n.status==="loading")setTimeout(fetchNews,15000);
   }catch(e){console.error("fetchNews:",e);}
 }
 function scheduleNewsRefresh(){
@@ -303,6 +305,12 @@ function panelNews(){
     {key:"Europe", icon:"🌍"},
     {key:"US",     icon:"🗽"},
   ];
+
+  const hdr=`<div class="sec-header"><span>📰</span><span class="sec-title">Market News</span></div>`;
+
+  if(state.news?._rebuild)
+    return hdr+`<div class="mono" style="font-size:.66rem;color:#f0a030;padding:6px 2px">⚠ Backend needs rebuild — docker-compose up --build</div>`;
+
   const regions=state.news?.regions;
 
   const sections=REGION_META.map(({key,icon},ri)=>{
@@ -313,9 +321,9 @@ function panelNews(){
       <span style="font-family:'Bebas Neue',sans-serif;font-size:.75rem;letter-spacing:.13em;color:#5ab0e0">${key}</span>
     </div>`;
     const rows=!regions
-      ?`<div class="mono" style="font-size:.66rem;color:#334;padding:3px 2px">Loading…</div>`
+      ?`<div class="mono" style="font-size:.66rem;color:#5a8cb0;padding:3px 2px">Loading…</div>`
       :items.length===0
-        ?`<div class="mono" style="font-size:.66rem;color:#334;padding:3px 2px">No data</div>`
+        ?`<div class="mono" style="font-size:.66rem;color:#5a8cb0;padding:3px 2px">No data — check container logs</div>`
         :items.map(item=>{
           const t=item.pub?new Date(item.pub):null;
           const ts=t&&!isNaN(t)?t.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
@@ -330,7 +338,7 @@ function panelNews(){
     return sep+header+rows;
   }).join("");
 
-  return `<div class="sec-header"><span>📰</span><span class="sec-title">Market News</span></div>${sections}`;
+  return hdr+sections;
 }
 
 const panelBuilders={
