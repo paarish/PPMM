@@ -67,29 +67,29 @@ const DEVICES={
   "Mac":      {icon:"💻",w:null,h:null,cols:0,radius:0, bezel:0, hfs:"1.5rem"}
 };
 const PANEL_IDS=["indices","fx-crypto","bonds-oil","stocks"];
-const INDICES=[
-  {l:"S&P 500",  vix:false},
-  {l:"NASDAQ",   vix:false},
-  {l:"FTSE 100", vix:false},
-  {l:"DAX",      vix:false},
-  {l:"Nikkei 225",vix:false},
-  {l:"Hang Seng",vix:false},
-  {l:"VIX",      vix:true}
-];
-const FX=[
-  {l:"GBP/USD",dec:4},
-  {l:"EUR/USD",dec:4},
-  {l:"USD/JPY",dec:2},
-  {l:"EUR/GBP",dec:4}
-];
-const COMM=[
-  {l:"Brent Crude",dec:2,unit:" USD"},
-  {l:"WTI Crude",  dec:2,unit:" USD"},
-  {l:"Gold",       dec:2,unit:" USD"},
-  {l:"TTF Gas",    dec:3,unit:" EUR"},
-  {l:"Henry Hub",  dec:3,unit:" USD"},
-];
-const CRYPTO=[{l:"Bitcoin"}];
+
+// Populated from /api/config at startup — no hardcoded instrument lists
+let INDICES=[];
+let FX=[];
+let COMM=[];
+let CRYPTO=[];
+let BONDS=[];
+
+async function fetchConfig(){
+  try{
+    const r=await fetch("/api/config");
+    if(!r.ok)return;
+    const cfg=await r.json();
+    INDICES=[
+      ...(cfg.indices||[]).map(e=>({l:e.label,dec:e.decimals??2,vix:false})),
+      ...(cfg.vix||[]).map(e=>({l:e.label,dec:e.decimals??2,vix:true,thresholds:e.thresholds})),
+    ];
+    FX=(cfg.fx||[]).map(e=>({l:e.label,dec:e.decimals??4}));
+    COMM=(cfg.commodities||[]).map(e=>({l:e.label,dec:e.decimals??2,unit:e.unit?` ${e.unit}`:""}));
+    CRYPTO=(cfg.crypto||[]).map(e=>({l:e.label,dec:e.decimals??0}));
+    BONDS=(cfg.bonds||[]).map(e=>({l:e.label,dec:e.decimals??3,src:e.source==="fred"?"FRED":"GF"}));
+  }catch(e){console.error("fetchConfig:",e);}
+}
 
 const fmt=(n,d=2)=>{if(n==null||isNaN(n))return"—";return Number(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});};
 const chipArrow=v=>v>=0?"▲":"▼";
@@ -199,28 +199,23 @@ function panelIndices(){
   const rows=INDICES.map(i=>{
     const q=state.data.indices[i.l];
     const vv=i.vix?q?.price:null;
-    const vl=vv==null?null:vv<15?{l:"LOW FEAR",c:"#00d084"}:vv<25?{l:"MODERATE",c:"#f0a030"}:vv<35?{l:"HIGH FEAR",c:"#ff7040"}:{l:"EXTREME",c:"#ff4d4d"};
-    const dec=(i.l.includes("Nikkei")||i.l.includes("Hang"))?0:2;
-    return dataRow(i.l,q?.price,i.vix?null:q?.change,i.vix?null:q?.pct,"",dec,vl?.l,vl?.c);
+    const t=i.thresholds||{low:15,moderate:25,high:35};
+    const vl=vv==null?null:vv<t.low?{l:"LOW FEAR",c:"#00d084"}:vv<t.moderate?{l:"MODERATE",c:"#f0a030"}:vv<t.high?{l:"HIGH FEAR",c:"#ff7040"}:{l:"EXTREME",c:"#ff4d4d"};
+    return dataRow(i.l,q?.price,i.vix?null:q?.change,i.vix?null:q?.pct,"",i.dec??2,vl?.l,vl?.c);
   }).join("");
   return `<div class="sec-header"><span>🌍</span><span class="sec-title">Global Equity Indices</span></div>${rows}`;
 }
 function panelFxCrypto(){
   const fxRows=FX.map(p=>{const q=state.data.fx[p.l];return dataRow(p.l,q?.price,q?.change,q?.pct,"",p.dec);}).join("");
-  const crRows=CRYPTO.map(c=>{const q=state.data.crypto[c.l];return dataRow(c.l,q?.price,q?.change,q?.pct," USD",0);}).join("");
+  const crRows=CRYPTO.map(c=>{const q=state.data.crypto[c.l];return dataRow(c.l,q?.price,q?.change,q?.pct,c.unit||" USD",c.dec??0);}).join("");
   return `<div class="sec-header"><span>💱</span><span class="sec-title">FX Rates</span></div>${fxRows}
   <div style="margin-top:11px"><div class="sec-header"><span>₿</span><span class="sec-title">Cryptocurrency</span></div>${crRows}</div>`;
 }
-function bondSource(l){
-  if(l==="US 10Y")return"GF";
-  return"FRED";
-}
 function panelBondsOil(){
-  const bonds=["US 2Y","US 10Y","UK 10Y"].map(l=>{
-    const q=state.data.bonds[l];
-    const src=bondSource(l);
-    const pct=src==="GF"?q?.pct:null;  // FRED has no daily change
-    return dataRow(l,q?.price,null,pct,"%",3,src,"#3a6a8a");
+  const bonds=BONDS.map(b=>{
+    const q=state.data.bonds[b.l];
+    const pct=b.src==="GF"?q?.pct:null;
+    return dataRow(b.l,q?.price,null,pct,"%",b.dec,b.src,"#3a6a8a");
   }).join("");
   const commRows=COMM.map(c=>{const q=state.data.comm[c.l];return dataRow(c.l,q?.price,q?.change,q?.pct,c.unit,c.dec);}).join("");
   return `<div class="sec-header"><span>🏛️</span><span class="sec-title">Government Bond Yields</span></div>${bonds}
@@ -410,6 +405,7 @@ function render(){
   const missing=PANEL_IDS.filter(id=>!saved.includes(id));
   state.panels=[...saved,...missing];
 
+  await fetchConfig();
   render();
   scheduleCountdown();
   await fetchAllData();
